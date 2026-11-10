@@ -3,6 +3,12 @@
 Status: Proposed architecture; not an implemented system.
 Date: 2026-11-10
 
+Implementation note: the standalone release-1 implementation is now defined by
+SPEC.md, with operation documentation in API_CLI.md and verification evidence in
+VALIDATION.md. This document preserves the broader original design; it is not a
+claim that every future capability (such as model-driven people or live voice)
+is included in release 1.
+
 ## 1. Purpose and boundaries
 
 Build a small, functioning personal-injury law-firm workspace, surrounded by a test controller and an independent evaluator. AI agents perform realistic intake and follow-up work inside it, and the evaluator checks what actually happened.

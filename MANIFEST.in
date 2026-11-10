@@ -1,0 +1,6 @@
+include *.md
+include Dockerfile
+include uv.lock
+recursive-include examples *.py
+recursive-include tests *.py
+recursive-include firm_lab/static *
