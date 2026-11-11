@@ -59,7 +59,7 @@ Open http://127.0.0.1:8810 on your own machine. Do not expose the service public
 6. Book a consultation in Calendar. Try an overlapping slot; it should be rejected.
 7. Add a case document, edit it, and inspect the prior version.
 8. Restart the server. Records remain.
-9. Use Firm controls to reset the demo world to realistic or empty state. Other worlds and frozen runs remain untouched.
+9. Click **Reset demo** beside **Refresh** while viewing the website demo world. Confirm **Clear demo and start fresh** to remove all business records without adding samples. Cancel leaves everything unchanged. This restores basic staff, form, policy, workflow templates, and clock to defaults; access tokens, other worlds, and evaluation results remain untouched. The button is controller-only. Firm controls also offers a reset with a choice of empty or realistic sample data (empty is the default).
 
 The public website always submits to the dedicated demo world. It does not silently switch to whatever run an operator is viewing.
 

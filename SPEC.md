@@ -18,7 +18,7 @@ Architecture adjustment: isolated SQLite databases per world replace the propose
 - A06 Documents stored persistently with versions; forms collect public submissions into the leads inbox.
 - A07 Firm policy controls and workflow templates: email, task, form request and status steps, waits for completion; changes observable.
 - A08 Public website submission through same business rules. Errors visible, persistence verified across restart.
-- A09 Create/reset/clone isolated worlds with realistic seed or empty state; reset preserves access while restoring configured starting state; no cross-world agent access.
+- A09 Create/reset/clone isolated worlds with realistic seed or empty state; reset preserves access while restoring configured starting state; no cross-world agent access. A controller-only Reset demo button beside Refresh is visible in the dedicated website world. It confirms deletion then resets with empty seed, clears selected-record navigation, and returns to Overview. Other worlds/results are untouched; firm settings and base setup return to defaults. Advanced reset defaults to empty, with realistic samples opt-in.
 - A10 Scenario controller with versioned private facts, predefined events, advanceable business clock, scheduled replies/staff changes and one-shot faults (before action, after-commit timeout, failed message).
 - A11 Separate restricted agent account with HTTP and MCP tools; no access to private scenarios, control tables, faults, answer keys, evaluator or reset.
 - A12 Text participant sessions with private persona facts, goals, distinct speaker turns, human role-play and a clearly labeled scripted simulator for deterministic tests. No claim that scripted actors measure natural-language intelligence.

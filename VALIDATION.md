@@ -58,6 +58,16 @@ A mutation can commit and then return an injected 504. Retrying the same request
 
 Unchanged state does not satisfy the assignment. Wrong-record modifications remain detectable in history even if the final value is restored. An agent cannot access another world, change firm configuration, forge caller turns, inspect private scenario data, accept an attorney handoff as an intake user, reset a run, or mutate frozen evidence.
 
+## Reset button verification — 2026-11-11
+
+All 50 tests passed after adding the prominent empty-demo reset. The Chromium
+workflow verifies visibility in the website demo world, cancel without deletion,
+confirmed deletion of all business records, retained basic setup, navigation back
+to Overview, unchanged other-world records, and hiding the shortcut in a run world.
+Tests use a temporary database and do not reset the user's demo. JavaScript syntax
+and Git whitespace checks passed. The existing Starlette/httpx deprecation warning
+remains unrelated to this change.
+
 ## Deliberate limits; not represented as completed capabilities
 
 - No live Clio integration or API-conformance certification; this is a Grow-inspired application.

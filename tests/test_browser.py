@@ -90,6 +90,26 @@ def test_browser_workflow(tmp_path):
             expect(page.locator('audio')).to_be_visible()
             page.wait_for_function("Number.isFinite(document.querySelector('audio')?.duration)")
             assert page.locator('audio').evaluate('(a)=>a.duration')>0
+            # Prominent empty reset: cancel is safe, confirmation clears only the demo.
+            expect(page.get_by_role('button',name='Reset demo',exact=True)).to_be_visible()
+            page.get_by_role('button',name='Reset demo',exact=True).click()
+            expect(page.locator('#modal')).to_contain_text('No sample cases are added')
+            page.get_by_role('button',name='Cancel',exact=True).click()
+            expect(page.locator('audio')).to_be_visible()
+            worlds=httpx.post(url+'/api/ops/world.list',headers=auth,json={}).json()
+            other=next(w['id'] for w in worlds if w['id']!=world)
+            before=httpx.post(url+'/api/ops/world.state',headers=auth,json={'world':other}).json()
+            page.get_by_role('button',name='Reset demo',exact=True).click()
+            page.get_by_role('button',name='Clear demo and start fresh',exact=True).click()
+            expect(page.locator('#page-title')).to_have_text('Your firm at a glance')
+            fresh=httpx.post(url+'/api/ops/world.state',headers=auth,json={'world':world}).json()
+            for entity,records in fresh['data'].items():
+                if entity not in {'staff','forms','workflows'}: assert not records,entity
+            assert fresh['data']['forms'] and fresh['data']['staff']
+            after=httpx.post(url+'/api/ops/world.state',headers=auth,json={'world':other}).json()
+            assert before['data']==after['data']
+            page.locator('#world-select').select_option(other)
+            expect(page.get_by_role('button',name='Reset demo',exact=True)).to_be_hidden()
             assert not errors,errors
             browser.close()
         # CLI operates over HTTP, not the database.

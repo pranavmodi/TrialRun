@@ -36,7 +36,7 @@ Every operation has CLI form: firm-lab call OPERATION --json 'ARGUMENTS'.
 |---|---|---|---|
 | world.list | C | none | List worlds |
 | world.create | C | name, seed: realistic or empty | Create isolated world |
-| world.reset | C | seed optional | Reset demo/ordinary world; run worlds are protected |
+| world.reset | C | seed optional | Reset demo/ordinary world; run worlds are protected. Header Reset demo uses explicit seed=empty on the website demo world. |
 | world.clone | C | name optional | Copy business state to a new independently writable world |
 | grant.create | C | role, actor optional | Return a scoped token once |
 | grant.list | C | none | List grants without token hashes |
@@ -108,6 +108,17 @@ Create and convert a lead:
 
     firm-lab call records.create --json '{"world":"WORLD","entity":"leads","data":{"name":"Jamie Rivera","phone":"+14155550199","summary":"Rear-end collision","consent":true}}'
     firm-lab call lead.convert --json '{"world":"WORLD","id":"LEAD_ID"}'
+
+To perform the same empty reset as the workspace's **Reset demo** button, use the
+demo world ID returned by `world.list` (the dedicated website world is also
+reported by `GET /api/session` as `demo_world`):
+
+    firm-lab call world.reset --json '{"world":"DEMO_WORLD_ID","seed":"empty"}'
+
+This deletes business records and restores base staff, form, policy, workflow
+templates, and clock defaults. It preserves access and does not reset other
+worlds or historical evaluations. The CLI applies immediately; the UI shows a
+confirmation dialog without requiring a typed phrase.
 
 Update with concurrency protection:
 
