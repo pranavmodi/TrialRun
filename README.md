@@ -65,6 +65,16 @@ The public website always submits to the dedicated demo world. It does not silen
 
 ## Evaluate an agent
 
+Evaluation lab opens on **Convert one website inquiry**. **Try scripted example**
+runs the reference conversion and shows five checks; it does not run an AI.
+**Set up agent run** creates the same isolated intake test for your external
+agent. Connect with its scoped token, let it process the inquiry, then select
+**Finish and evaluate**. The page shows the result and the evidence for each
+check. Other scenarios and their run history are collapsed under **More scenarios
+and other runs**.
+
+For those other scenarios:
+
 1. Open Evaluation lab and choose Create run on a scenario.
 2. Copy the returned scoped token and assignment for the evaluated agent.
 3. Connect that agent through HTTP, MCP, or a browser signed in with its scoped token.

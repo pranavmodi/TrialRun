@@ -39,6 +39,7 @@ Three roles: intake, attorney, observer; controller token owns lab administratio
 UI/API/CLI all invoke the same operation registry and service layer. Generic resource operations use explicit entity allowlists and field schemas. Additional semantic operations handle conversion, message delivery, booking, workflow stepping and actor turns.
 
 ## Evaluation
+The Evaluation lab landing page highlights only the intake-only scenario and its attempts. The full library and old runs remain available in a closed disclosure. Starter attempts show conversion status and grader results, without caller controls. Scripted examples are distinguished from external-agent runs.
 The intake-only scenario starts with one fictional website submission, unrelated background records, and no prior contact for Jamie. Convert exactly once through the scoped agent account, preserving the submitted contact and accident fields. No callback, conversation, case acceptance, assignment, or outreach is required. Grade the linked lead/contact/matter and collateral writes against the original snapshot. Existing scenarios and historical runs retain their own contracts.
 
 Pass requires all required programmatic criteria, not a favorable mean. Return passes/failures/uncertain dimensions individually. Never treat unavailable semantic judgment as a pass. Reference solutions demonstrate solvability. Broken runs are classified as environment errors where appropriate. Held-out scenario generation and expert validation are future research steps, not claims of this release.

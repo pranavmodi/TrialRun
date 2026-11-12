@@ -70,6 +70,8 @@ remains unrelated to this change.
 
 ## Deliberate limits; not represented as completed capabilities
 
+Intake-only UI verification (2026-11-12): all 53 tests passed. Chromium verified that only the starter scenario is initially visible, its scripted conversion scores 5/5, an untouched external run scores 0/5, and the older scenarios remain accessible. The API negative test changes the location and drafts an unrequested message; both checks fail. Testing used temporary worlds. The live service was checked read-only for the installed scenario and updated UI.
+
 - No live Clio integration or API-conformance certification; this is a Grow-inspired application.
 - No real outbound email/SMS, phone calls, browser voice or automatic audio capture.
 - Text participants are scripted fixtures or human role-play. No autonomous LLM participant has been deployed or tested.
