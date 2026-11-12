@@ -1,6 +1,6 @@
-# PI Firm Lab
+# TrialRun
 
-A standalone, persistent PI-firm workspace and agent-evaluation laboratory. Inspired by Clio Grow intake concepts; **not a Clio product, pixel replica, or certified API emulator**.
+TrialRun is an [MIT-licensed](LICENSE) personal injury firm simulator for evaluating AI agents on the work of a case. The first release focuses on intake and follow-up. Its workspace is inspired by Clio Grow; it is **not a Clio product or certified API emulator**.
 
 Everything runs in this directory. No live Clio account, existing Intake Agent service, shared database, external email/SMS provider, or AI-provider account is required.
 
