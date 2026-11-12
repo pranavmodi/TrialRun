@@ -73,13 +73,18 @@ agent. Connect with its scoped token, let it process the inquiry, then select
 check. Other scenarios and their run history are collapsed under **More scenarios
 and other runs**.
 
+Every run is a numbered attempt under its scenario. Attempt 1 and Attempt 2
+start from the same scenario setup, not from the previous attempt. Open **View
+attempt → Inspect records** to see changes and saved records without leaving
+your firm. The firm selector excludes attempts, including older ones.
+
 For those other scenarios:
 
 1. Open Evaluation lab and choose Create run on a scenario.
 2. Copy the returned scoped token and assignment for the evaluated agent.
 3. Connect that agent through HTTP, MCP, or a browser signed in with its scoped token.
 4. Use Caller speaks for deterministic fixture speech, or Human role-play to supply natural caller messages. The agent writes its own turns and performs business operations.
-5. Watch the run in Observe; private scenario facts are visible only to the controller.
+5. Use **View attempt** under the scenario to inspect its activity; private scenario facts are visible only to the controller.
 6. Finish & freeze the run, then Evaluate frozen evidence.
 7. Inspect each criterion and its evidence. Add an expert review if appropriate.
 

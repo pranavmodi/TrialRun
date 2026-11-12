@@ -195,6 +195,25 @@ def test_intake_only_checks_saved_facts_and_scope(env):
     result=good(call("run.grade",{"id":run["id"]}))
     assert {x["id"] for x in result["checks"] if x["verdict"]=="failed"}=={"facts","scope"}
 
+def test_attempts_are_numbered_per_scenario_and_not_firms(env):
+    app,_,call,_=env
+    firm=good(call("world.create",{"name":"Another firm","seed":"empty"}))
+    first=good(call("run.reference",{"scenario_id":"intake-only"}))
+    second=good(call("run.create",{"scenario_id":"intake-only"}))
+    other=good(call("run.create",{"scenario_id":"new-inquiry"}))
+    # Older test worlds had no kind marker. The stored run still identifies them.
+    with app.state.store.control() as c:
+        c.execute("UPDATE worlds SET data=json_remove(data,'$.kind') WHERE id=?",(first["world"],))
+    assert {w["id"] for w in good(call("world.list",{"scope":"firms"}))}=={app.state.demo_id,firm["id"]}
+    assert len(good(call("world.list")))==5
+    summaries={r["id"]:r for r in good(call("run.list"))}
+    for r,number in [(first,1),(second,2),(other,1)]:
+        assert summaries[r["id"]]["attempt_number"]==number
+        detail=good(call("run.inspect",{"id":r["id"]}))
+        assert detail["attempt_number"]==number
+        assert bool(detail["changes"])==(r==first)
+    assert summaries[first["id"]]["outcome"]=="passed" and summaries[second["id"]]["outcome"] is None
+
 def test_noop_fails_freeze_and_review(env):
     created=good(env[2]("run.create",{"scenario_id":"returning-caller"}))
     assert env[2]("run.grade",{"id":created["id"]}).status_code==409

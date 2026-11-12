@@ -70,6 +70,11 @@ remains unrelated to this change.
 
 ## Deliberate limits; not represented as completed capabilities
 
+Scenario-centered navigation (2026-11-12): 54 tests passed, including per-scenario numbering,
+latest grade summaries, legacy test-world filtering, visibility of separately created firms,
+and read-only record inspection. Browser tests cover passed and failed attempts while the
+demo remains selected. A read-only live check found one selectable firm and both older attempts preserved.
+
 Intake-only UI verification (2026-11-12): all 53 tests passed. Chromium verified that only the starter scenario is initially visible, its scripted conversion scores 5/5, an untouched external run scores 0/5, and the older scenarios remain accessible. The API negative test changes the location and drafts an unrequested message; both checks fail. Testing used temporary worlds. The live service was checked read-only for the installed scenario and updated UI.
 
 - No live Clio integration or API-conformance certification; this is a Grow-inspired application.

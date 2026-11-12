@@ -149,15 +149,24 @@ class Service:
 
     @operation("world.list","List worlds",ADMIN,control=True)
     def world_list(self,a,p):
-        with self.store.control() as c: return rows(c,"worlds")
+        scope=a.get("scope","all")
+        if scope not in ("all","firms"): raise LabError("Unknown world list scope")
+        with self.store.control() as c:
+            worlds=rows(c,"worlds")
+            if scope=="all": return worlds
+            attempts={row[0] for row in c.execute("SELECT json_extract(data,'$.world') FROM runs")}
+            return [w for w in worlds if w["id"] not in attempts and w.get("kind")!="attempt"]
 
     @operation("world.create","Create world",ADMIN,True,True)
     def world_create(self,a,p):
         if a.get("seed","realistic") not in ("realistic","empty"): raise LabError("seed must be realistic or empty")
+        return self._create_world(a)
+
+    def _create_world(self,a,kind="firm"):
         world=uid()
         self.store.initialize_world(world,TABLES)
         self.seed(world,a.get("seed","realistic"),a.get("name","Harbor & Stone"))
-        record={"id":world,"name":a.get("name","Harbor & Stone"),"created_at":now(),"seed":a.get("seed","realistic")}
+        record={"id":world,"name":a.get("name","Harbor & Stone"),"created_at":now(),"seed":a.get("seed","realistic"),"kind":kind}
         with self.store.control() as c: put(c,"worlds",record)
         return record
 

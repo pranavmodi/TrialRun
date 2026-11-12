@@ -34,7 +34,7 @@ Every operation has CLI form: firm-lab call OPERATION --json 'ARGUMENTS'.
 
 | Operation | Roles | Arguments beyond world | Behavior |
 |---|---|---|---|
-| world.list | C | none | List worlds |
+| world.list | C | scope optional | List all worlds (default); `scope: "firms"` returns only entries eligible for the firm selector, excluding all evaluation attempts. |
 | world.create | C | name, seed: realistic or empty | Create isolated world |
 | world.reset | C | seed optional | Reset demo/ordinary world; run worlds are protected. Header Reset demo uses explicit seed=empty on the website demo world. |
 | world.clone | C | name optional | Copy business state to a new independently writable world |
@@ -64,8 +64,8 @@ Every operation has CLI form: firm-lab call OPERATION --json 'ARGUMENTS'.
 | scenario.list | C | none | Scenario catalog including controller-private facts |
 | scenario.save | C | base_id, name, description, persona, options | Create a new scenario variant, preserving old version |
 | run.create | C | scenario_id, agent_metadata optional | Create isolated world and scoped agent token |
-| run.list | C | none | Run summaries |
-| run.inspect | C | id | Observer view, state, results and reviews |
+| run.list | C | none | Run summaries with scenario ID, per-scenario attempt number and most recent grade outcome (null before grading). |
+| run.inspect | C | id | Read-only attempt number, state, business-record changes since setup, results and reviews; finished attempts use frozen evidence. |
 | actor.respond | C | id (run), text optional | Next scripted caller turn or human role-play |
 | run.finish | C | id | Freeze business state and evaluation evidence |
 | run.grade | C | id | Append deterministic structural evaluation of frozen evidence |

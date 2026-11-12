@@ -77,7 +77,7 @@ class LabService(Service):
     @operation("run.create","Create isolated scenario run",ADMIN,True,True)
     def run_create(self,a,p):
         with self.store.control() as c: scenario=copy.deepcopy(get(c,"scenarios",a["scenario_id"]))
-        world=self.world_create({"name":scenario["name"],"seed":"realistic"},p)["id"]
+        world=self._create_world({"name":scenario["name"],"seed":"realistic"},kind="attempt")["id"]
         grant=self.grant_create({"world":world,"role":"intake","actor":"evaluated-agent"},p)
         with self.store.world(world) as c:
             contact=next(x for x in rows(c,"contacts") if x["phone"]=="+14155550122")
@@ -119,16 +119,27 @@ class LabService(Service):
     @operation("run.list","List runs",ADMIN,control=True)
     def run_list(self,a,p):
         with self.store.control() as c:
-            return [{k:r[k] for k in ("id","world","status","created_at","execution_mode","agent_metadata")} |
-                    {"name":r["scenario"]["name"],"scenario_id":r["scenario"]["id"]} for r in rows(c,"runs")]
+            # Rank by insertion order (stable across updates and restarts), including legacy runs.
+            outcomes={row[0]:row[1] for row in c.execute(
+                "SELECT json_extract(data,'$.run_id'),json_extract(data,'$.status') FROM results ORDER BY rowid")}
+            return [dict(r)|{"agent_metadata":json.loads(r["agent_metadata"] or "{}"),"outcome":outcomes.get(r["id"])} for r in c.execute("""
+                SELECT id, json_extract(data,'$.world') AS world, json_extract(data,'$.status') AS status,
+                  json_extract(data,'$.created_at') AS created_at, json_extract(data,'$.execution_mode') AS execution_mode,
+                  json_extract(data,'$.agent_metadata') AS agent_metadata, json_extract(data,'$.scenario.name') AS name,
+                  json_extract(data,'$.scenario.id') AS scenario_id,
+                  row_number() OVER (PARTITION BY json_extract(data,'$.scenario.id') ORDER BY rowid) AS attempt_number
+                FROM runs ORDER BY rowid""")]
 
     @operation("run.inspect","Observe run",ADMIN,control=True)
     def run_inspect(self,a,p):
         with self.store.control() as c:
             r=get(c,"runs",a["id"])
+            number=c.execute("SELECT count(*) FROM runs WHERE json_extract(data,'$.scenario.id')=? AND rowid<=(SELECT rowid FROM runs WHERE id=?)",(r["scenario"]["id"],r["id"])).fetchone()[0]
             results=[x for x in rows(c,"results") if x["run_id"]==r["id"]]
             reviews=[x for x in rows(c,"reviews") if x["run_id"]==r["id"]]
-        return {**{k:v for k,v in r.items() if k not in ("initial","final")},"state":r.get("final") or snapshot(self.store,r["world"]),"results":results,"reviews":reviews}
+        state=r.get("final") or snapshot(self.store,r["world"])
+        changes=[e for e in state["events"][len(r["initial"]["events"]):] if e["entity"] in TABLES]
+        return {**{k:v for k,v in r.items() if k not in ("initial","final")},"attempt_number":number,"changes":changes,"state":state,"results":results,"reviews":reviews}
 
     @operation("actor.respond","Advance scripted participant",ADMIN,True,True)
     def actor(self,a,p):

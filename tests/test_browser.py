@@ -67,6 +67,10 @@ def test_browser_workflow(tmp_path):
             page.get_by_role("button",name="Try scripted example").click()
             expect(page.locator("#content")).to_contain_text("5 of 5 checks passed",timeout=30000)
             expect(page.locator("#page-description")).to_contain_text("not an AI evaluation")
+            expect(page.locator("#page-title")).to_contain_text("Attempt 1")
+            page.get_by_text("Inspect records",exact=True).click()
+            expect(page.get_by_text("What changed",exact=True)).to_be_visible()
+            expect(page.get_by_text("create · contacts · Jamie Rivera",exact=True)).to_be_visible()
             expect(page.get_by_role("button",name="Caller speaks")).to_have_count(0)
             page.get_by_role("button",name="Back to evaluation lab").click()
             page.get_by_role("button",name="Set up agent run").click()
@@ -74,7 +78,10 @@ def test_browser_workflow(tmp_path):
             page.get_by_role("button",name="Close dialog").click()
             page.get_by_role("button",name="Finish and evaluate").click()
             expect(page.locator("#content")).to_contain_text("0 of 5 checks passed")
+            expect(page.locator("#page-title")).to_contain_text("Attempt 2")
             page.get_by_role("button",name="Back to evaluation lab").click()
+            expect(page.get_by_role("row").filter(has_text="Attempt 2")).to_contain_text("failed")
+            expect(page.get_by_role("row").filter(has_text="Attempt 1")).to_contain_text("passed")
             page.get_by_text("More scenarios and other runs",exact=True).click()
             page.locator('[data-action="reference"][data-id="ambiguous-save"]').click()
             expect(page.locator("#content")).to_contain_text("7/7 checks",timeout=30000)
@@ -122,8 +129,8 @@ def test_browser_workflow(tmp_path):
             assert fresh['data']['forms'] and fresh['data']['staff']
             after=httpx.post(url+'/api/ops/world.state',headers=auth,json={'world':other}).json()
             assert before['data']==after['data']
-            page.locator('#world-select').select_option(other)
-            expect(page.get_by_role('button',name='Reset demo',exact=True)).to_be_hidden()
+            expect(page.locator('#world-select option')).to_have_count(1)
+            expect(page.locator('#world-select')).to_have_value(world)
             assert not errors,errors
             browser.close()
         # CLI operates over HTTP, not the database.
