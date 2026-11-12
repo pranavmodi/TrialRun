@@ -65,6 +65,36 @@ def test_health_auth_and_registry(env):
     assert client.get("/website").status_code==200
     assert client.get("/openapi.json").status_code==200
 
+def test_parallel_scenarios_have_independent_workers_and_state(env,monkeypatch):
+    import threading,time
+    app,client,call,_=env
+    manual=state(env)
+    both=threading.Barrier(3,timeout=10)
+    resume=threading.Event()
+    original=app.state.lab._background_reference
+    def synchronized(created,p):
+        both.wait()
+        assert resume.wait(10)
+        return original(created,p)
+    monkeypatch.setattr(app.state.lab,"_background_reference",synchronized)
+    runs=good(call("run.launch",{"scenario_ids":["intake-only","returning-caller"]}))["attempts"]
+    both.wait()
+    try:
+        a,b=[good(call("run.inspect",{"id":x["id"]})) for x in runs]
+        assert a["world"]!=b["world"] and a["id"]!=b["id"]
+        assert not a["state"]["leads"] and not a["state"]["conversations"]
+        assert b["state"]["conversations"] and not a["results"] and not b["results"]
+    finally: resume.set()
+    for x in runs:
+        for _ in range(150):
+            r=good(call("run.inspect",{"id":x["id"]}))
+            if r["job_state"] in ("done","failed"): break
+            time.sleep(.05)
+        assert r["job_state"]=="done" and r["results"][-1]["status"]=="passed"
+        if x["scenario_id"]=="intake-only":assert r["state"]["leads"][0]["status"]=="converted"
+        else:assert not r["state"]["leads"]
+    assert state(env)==manual
+
 def test_public_form_conversion_existing_identity(env):
     app,client,call,h=env
     data={"name":"Jamie Test","phone":"+14155550198","email":"jamie@example.test","summary":"Rear-end crash","consent":True}

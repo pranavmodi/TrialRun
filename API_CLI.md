@@ -63,6 +63,7 @@ Every operation has CLI form: firm-lab call OPERATION --json 'ARGUMENTS'.
 | recording.attach | C | id (conversation), mime, base64 | Attach up to 5 MB of test audio |
 | scenario.list | C | none | Scenario catalog including controller-private facts |
 | scenario.save | C | base_id, name, description, persona, options | Create a new scenario variant, preserving old version |
+| run.launch | C | scenario_ids | Start 1–8 independent scripted attempts, return IDs immediately. Four concurrent server workers; inspect job_state via run.list or run.inspect. |
 | run.create | C | scenario_id, agent_metadata, watch_mode optional | Create an isolated attempt. For intake-only, watch_mode scripted or external starts before website submission. Only external setup returns an agent token. |
 | run.list | C | none | Run summaries with scenario ID, per-scenario attempt number and most recent grade outcome (null before grading). |
 | run.submit | C | id | Simulate the visitor submitting the form to this watched intake. Safe to retry. |
@@ -148,6 +149,8 @@ Create and observe an external-agent run:
 For the form-only scenario, the scoped agent can list leads and call `lead.convert` on the new lead. No conversation or follow-up actions are needed. The controller calls `run.finish` then `run.grade` with the run ID. To test the grader without an AI agent, run:
 
     firm-lab call run.reference --json '{"scenario_id":"intake-only"}'
+
+Parallel example: `firm-lab call run.launch --json '{"scenario_ids":["intake-only","returning-caller"]}'`. Each returned ID has a controller-only observer at `/lab/attempts/ID` (authenticated data via `run.inspect`). Navigation never starts, stops or switches a worker. Interrupted jobs are marked on service restart; launch a fresh attempt to retry.
 
 UI equivalents: **Try scripted example** → `run.create` with `watch_mode: "scripted"`; **Set up agent run** uses `watch_mode: "external"`. Next call `run.submit` with the run ID. For scripted runs call `run.script`; otherwise connect your own agent. Use `run.inspect` between steps to see the current records and events since `timeline_start`. The noninteractive `run.reference` still runs the whole fixture at once; **Finish and evaluate** → `run.finish`, then `run.grade`. `run.list` includes `scenario_id` so the dashboard or a CLI client can group new and historical attempts.
     firm-lab call run.inspect --json '{"id":"RUN_ID"}'

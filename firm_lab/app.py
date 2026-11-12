@@ -5,6 +5,7 @@ from pathlib import Path
 from fastapi import FastAPI, Request
 from fastapi.responses import FileResponse, JSONResponse, HTMLResponse
 from fastapi.staticfiles import StaticFiles
+from starlette.concurrency import run_in_threadpool
 from .db import Store, LabError, get, put, rows, meta
 from .schema import SCHEMAS
 from .lab import LabService
@@ -21,7 +22,12 @@ def create_app(data_root=None):
         demo=lab.execute("world.create",{"name":"Harbor & Stone — demo","seed":"realistic"},controller)
         demo_file.write_text(demo["id"])
     demo_id=demo_file.read_text().strip()
-    app=FastAPI(title="PI Firm Lab",version="0.1.0",docs_url=None,redoc_url=None,description="Independent simulated workplace. No external delivery. Operation registry: /api/operations.")
+    @asynccontextmanager
+    async def lifespan(_):
+        lab.recover_launches()
+        try: yield
+        finally: await run_in_threadpool(lab.workers.shutdown)
+    app=FastAPI(title="PI Firm Lab",version="0.1.0",docs_url=None,redoc_url=None,lifespan=lifespan,description="Independent simulated workplace. No external delivery. Operation registry: /api/operations.")
     app.state.store=store; app.state.lab=lab; app.state.demo_id=demo_id
     def auth(request):
         value=request.headers.get("authorization","")
@@ -62,7 +68,7 @@ def create_app(data_root=None):
     @app.get("/docs",response_class=HTMLResponse)
     def documentation():
         catalog="".join("<tr><td><code>"+html.escape(op["name"])+"</code></td><td>"+html.escape(op["label"])+"</td><td>"+html.escape(", ".join(op["roles"]))+"</td><td><code>"+html.escape(op["cli"])+"</code></td></tr>" for op in OPERATIONS.values())
-        return '<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>PI Firm Lab · API reference</title><link rel="stylesheet" href="/static/style.css"></head><body><header class="public-nav"><div class="public-brand">PI Firm Lab</div><a href="/">Open workspace</a></header><main><p class="eyebrow">LOCAL API REFERENCE</p><h1>One contract. Every interface.</h1><div class="callout">POST /api/ops/{operation} with JSON arguments and an Authorization: Bearer TOKEN header. Business operations require a world unless the token is world-scoped. Use records.update with the current record version; retry ambiguous writes with an Idempotency-Key.</div><p><a href="/openapi.json">HTTP OpenAPI document</a> · <a href="/api/operations">Authenticated operation registry</a> · <a href="/api/schema">Authenticated field schema</a></p><p>Full examples and argument descriptions are in API_CLI.md in the project directory. GET /health is public. Website submissions use POST /api/public/intakes. MCP tools use POST /mcp.</p><div class="table-wrap"><table><thead><tr><th>Operation</th><th>Purpose</th><th>Roles</th><th>CLI</th></tr></thead><tbody>'+catalog+'</tbody></table></div></main></body></html>'
+        return '<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>PI Firm Lab · API reference</title><link rel="stylesheet" href="/static/style.css"></head><body><header class="public-nav"><div class="public-brand">PI Firm Lab</div><a href="/workspace">Open workspace</a></header><main><p class="eyebrow">LOCAL API REFERENCE</p><h1>One contract. Every interface.</h1><div class="callout">POST /api/ops/{operation} with JSON arguments and an Authorization: Bearer TOKEN header. Business operations require a world unless the token is world-scoped. Use records.update with the current record version; retry ambiguous writes with an Idempotency-Key.</div><p><a href="/openapi.json">HTTP OpenAPI document</a> · <a href="/api/operations">Authenticated operation registry</a> · <a href="/api/schema">Authenticated field schema</a></p><p>Full examples and argument descriptions are in API_CLI.md in the project directory. GET /health is public. Website submissions use POST /api/public/intakes. MCP tools use POST /mcp.</p><div class="table-wrap"><table><thead><tr><th>Operation</th><th>Purpose</th><th>Roles</th><th>CLI</th></tr></thead><tbody>'+catalog+'</tbody></table></div></main></body></html>'
 
     @app.post("/api/login")
     async def login(request:Request):
@@ -92,7 +98,7 @@ def create_app(data_root=None):
     async def call(operation:str,request:Request):
         data=await request.json()
         if not isinstance(data,dict): raise LabError("Operation arguments must be an object")
-        return lab.execute(operation,data,auth(request),request.headers.get("idempotency-key"))
+        return await run_in_threadpool(lab.execute,operation,data,auth(request),request.headers.get("idempotency-key"))
 
     @app.get("/api/public")
     def public_config():
@@ -120,7 +126,7 @@ def create_app(data_root=None):
             try:
                 name=params["name"].replace("__",".")
                 if name not in OPERATIONS or OPERATIONS[name]["control"]: raise LabError("Controller tools are not exposed over MCP",403)
-                output=lab.execute(name,params.get("arguments",{}),p,request.headers.get("idempotency-key"))
+                output=await run_in_threadpool(lab.execute,name,params.get("arguments",{}),p,request.headers.get("idempotency-key"))
                 result={"content":[{"type":"text","text":json.dumps(output)}],"isError":False}
             except LabError as e:
                 result={"content":[{"type":"text","text":json.dumps({"error":str(e),"status":e.status})}],"isError":True}
@@ -128,7 +134,12 @@ def create_app(data_root=None):
         return {"jsonrpc":"2.0","id":request_id,"result":result}
 
     @app.get("/")
-    def home(): return FileResponse(STATIC/"index.html")
+    @app.get("/lab")
+    def lab_home(): return FileResponse(STATIC/"lab.html")
+    @app.get("/lab/attempts/{attempt_id}")
+    def lab_attempt(attempt_id:str): return FileResponse(STATIC/"lab.html")
+    @app.get("/workspace")
+    def workspace(): return FileResponse(STATIC/"index.html")
     @app.get("/website")
     def website(): return FileResponse(STATIC/"website.html")
     app.mount("/static",StaticFiles(directory=STATIC),name="static")

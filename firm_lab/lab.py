@@ -4,6 +4,7 @@ Reference policies validate fixtures. They are not an AI benchmark.
 """
 import copy
 import json
+from concurrent.futures import ThreadPoolExecutor
 from datetime import timedelta
 from .db import uid, now, rows, get, put, meta, LabError, audit
 from .schema import TABLES, timestamp
@@ -54,6 +55,19 @@ def intake_form(person):
             "location":"San Francisco","injury":"My shoulder is sore. I have not seen a doctor yet."}
 
 class LabService(Service):
+    def __init__(self,store):
+        super().__init__(store)
+        self.workers=ThreadPoolExecutor(max_workers=4,thread_name_prefix="trialrun")
+
+    def recover_launches(self):
+        # The local simulator runs one service process. Do not silently rerun a partial fixture.
+        with self.store.control() as c:
+            for r in rows(c,"runs"):
+                if r.get("job_state") in ("queued","working"):
+                    r.update(job_state="interrupted",error="Service stopped before the worker completed.")
+                    if r["status"]=="running": r["status"]="environment_error"
+                    put(c,"runs",r)
+
     def install_scenarios(self):
         with self.store.control() as c:
             for scenario in scenarios():
@@ -155,7 +169,7 @@ class LabService(Service):
             return [dict(r)|{"agent_metadata":json.loads(r["agent_metadata"] or "{}"),"outcome":outcomes.get(r["id"])} for r in c.execute("""
                 SELECT id, json_extract(data,'$.world') AS world, json_extract(data,'$.status') AS status,
                   json_extract(data,'$.created_at') AS created_at, json_extract(data,'$.execution_mode') AS execution_mode,
-                  json_extract(data,'$.agent_metadata') AS agent_metadata, json_extract(data,'$.scenario.name') AS name,
+                  json_extract(data,'$.agent_metadata') AS agent_metadata, json_extract(data,'$.scenario.name') AS name, json_extract(data,'$.job_state') AS job_state,
                   json_extract(data,'$.scenario.id') AS scenario_id,
                   row_number() OVER (PARTITION BY json_extract(data,'$.scenario.id') ORDER BY rowid) AS attempt_number
                 FROM runs ORDER BY rowid""")]
@@ -322,6 +336,45 @@ class LabService(Service):
     @operation("run.reference","Run reference fixture policy",ADMIN,True,True)
     def reference(self,a,p):
         created=self.run_create({**a,"watch_mode":None},p)
+        return self._reference(created,p)
+
+    @operation("run.launch","Launch independent scripted attempts",ADMIN,True,True)
+    def launch(self,a,p):
+        ids=a.get("scenario_ids")
+        if not isinstance(ids,list) or not 1<=len(ids)<=8 or not all(isinstance(i,str) for i in ids):
+            raise LabError("Select between one and eight scenarios")
+        with self.store.control() as c:
+            for scenario in ids: get(c,"scenarios",scenario)
+        attempts=[]
+        for scenario in ids:
+            created=self.run_create({"scenario_id":scenario,"watch_mode":"scripted" if scenario=="intake-only" else None},p)
+            with self.store.control() as c:
+                r=get(c,"runs",created["id"])
+                r.update(job_state="queued",execution_mode="reference_fixture")
+                put(c,"runs",r)
+            self.workers.submit(self._background_reference,created,p)
+            attempts.append({"id":created["id"],"scenario_id":scenario})
+        return {"attempts":attempts}
+
+    def _background_reference(self,created,p):
+        id=created["id"]
+        try:
+            with self.store.control() as c:
+                r=get(c,"runs",id);r["job_state"]="working";put(c,"runs",r)
+            if r.get("watch_mode"):
+                self.submit({"id":id},p);self.script({"id":id},p)
+                self.finish({"id":id},p);self.grade({"id":id},p)
+            else:
+                self._reference(created,p)
+            error=None
+        except Exception as e:
+            error=str(e)
+        with self.store.control() as c:
+            r=get(c,"runs",id);r["job_state"]="failed" if error else "done"
+            if error:r.update(error=error,status="environment_error")
+            put(c,"runs",r)
+
+    def _reference(self,created,p):
         with self.store.control() as c:
             run=get(c,"runs",created["id"]); run["execution_mode"]="reference_fixture"; put(c,"runs",run)
         agent=self.store.authenticate(created["agent_token"])

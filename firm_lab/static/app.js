@@ -1,5 +1,5 @@
 const $=s=>document.querySelector(s), esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-let session,schemas,operations,world,state,page='overview',selectedMatter=null,selectedRun=null;
+let session,schemas,operations,world,state,page='overview',selectedMatter=null;
 const sections=[
  ['overview','Overview','Your firm at a glance','Work through a realistic intake desk. Every change is stored and observable.'],
  ['leads','Leads inbox','New inquiries','Website submissions arrive here before becoming contacts and matters.'],
@@ -27,7 +27,7 @@ async function op(name,args={}){return api('/api/ops/'+name,{world,...args})}
 function notify(text,error=false){const t=$('#toast');t.textContent=text;t.className=error?'error':'';t.hidden=false;clearTimeout(notify.timer);notify.timer=setTimeout(()=>t.hidden=true,6000)}
 async function boot(){try{session=await api('/api/session')}catch{return}schemas=await api('/api/schema');operations=await api('/api/operations');$('#login').hidden=true;$('#app').hidden=false;$('#role-badge').textContent=session.role;
 const nav=$('#nav');nav.innerHTML=sections.filter(s=>session.role==='controller'||!['lab','console'].includes(s[0])).map(s=>btn(s[1],'page','data-page="'+s[0]+'"')).join('');
-await loadWorlds();const saved=session.role==='controller'&&sessionStorage.getItem('watched-intake');if(saved){await enterWatch(saved);return}await refresh()}
+await loadWorlds();await refresh()}
 async function loadWorlds(){
  const worlds=session.role==='controller'?await op('world.list',{scope:'firms'}):[{id:session.world,name:'Agent workspace'}];
  const current=worlds.find(w=>w.id===(world||session.world||session.demo_world))||worlds.find(w=>w.id===session.demo_world)||worlds[0];
@@ -38,7 +38,7 @@ async function loadWorlds(){
  label.textContent=name(current);label.hidden=worlds.length>1;select.hidden=!label.hidden;
  select.replaceChildren(...(select.hidden?[]:worlds.map(w=>new Option(name(w),w.id,false,w.id===world))));
 }
-async function refresh(){if(watching)return refreshWatch(true);state=await op('world.state');$('#clock').textContent=when(state.clock)+' · simulation';render();if(page==='lab')await renderLab();if(page==='events')await renderEvents()}
+async function refresh(){state=await op('world.state');$('#clock').textContent=when(state.clock)+' · simulation';render();if(page==='events')await renderEvents()}
 function render(){const sec=sections.find(s=>s[0]===page);$('#page-title').textContent=sec[2];$('#page-description').textContent=sec[3];$('#section-kicker').textContent=['lab','console','events'].includes(page)?'OBSERVATION & CONTROL':'FIRM OPERATIONS';$('#reset-demo').hidden=session.role!=='controller'||world!==session.demo_world||state.frozen;
 document.querySelectorAll('#nav button').forEach(b=>b.classList.toggle('active',b.dataset.page===page));$('#page-actions').innerHTML='';const root=$('#content');
 if(state.frozen)$('#page-actions').innerHTML=badge('Frozen evidence','warn');
@@ -83,39 +83,6 @@ for(const entity of ['staff','forms','workflows'])html+='<details><summary>'+ent
 if(session.role==='controller')html+='<details><summary>World controls & access</summary><p class="hint">Resets affect only this demo world. Scenario runs retain frozen evidence.</p><div class="actions">'+btn('Create world','new-world')+btn('Clone world','clone-world')+btn('Advance clock','clock')+btn('Issue access token','grant')+btn('Reset world','reset','','danger')+'</div></details>';
 $('#content').innerHTML=html}
 async function renderEvents(){const events=await op('events.list');$('#content').innerHTML=events.slice().reverse().map(e=>'<details><summary>'+esc(e.action)+' · '+esc(e.entity)+' <span class="subtext">'+esc(e.actor)+' · '+when(e.at)+'</span></summary>'+pretty(e)+'</details>').join('')||empty('No activity yet')}
-const intakeScenario='intake-only';
-function runHistory(runs){
-  if(!runs.length)return '<p class="hint">No attempts yet.</p>';
-  return '<div class="table-wrap"><table><thead><tr><th>Attempt</th><th>Mode</th><th>Result</th><th></th></tr></thead><tbody>'+runs.slice().reverse().map(r=>'<tr><td>Attempt '+esc(r.attempt_number)+'</td><td>'+esc(r.execution_mode==='reference_fixture'?'Scripted example':'External agent')+'</td><td>'+esc(r.outcome||(r.status==='running'?'Open':r.status==='finished'?'Awaiting evaluation':r.status))+'</td><td>'+btn('View attempt','observe','data-id="'+esc(r.id)+'"','small')+'</td></tr>').join('')+'</tbody></table></div>';
-}
-async function renderLab(){
-  if(selectedRun)return showRun(selectedRun);
-  const [cases,runs]=await Promise.all([op('scenario.list'),op('run.list')]);
-  $('#page-title').textContent='Evaluation lab';
-  $('#page-description').textContent='Start with one job: turn a website inquiry into an accurate intake record.';
-  const starter=cases.find(s=>s.id===intakeScenario);
-  if(!starter){$('#content').innerHTML=empty('The intake scenario is not installed. Restart the lab service.');return}
-  $('#content').innerHTML='<section class="card"><p class="eyebrow">INTAKE TEST</p><h2>'+esc(starter.name)+'</h2><p>Watch Jamie submit a website form. Create one contact and one potential case using only the details Jamie provided.</p><p>No qualification, messages, assignments, or callbacks.</p><div class="actions">'+btn('Try scripted example','reference','data-id="'+intakeScenario+'"','primary')+btn('Set up agent run','new-run','data-id="'+intakeScenario+'"')+'</div><p class="hint">Watch each step in the attempt’s own workspace, starting with an empty Leads inbox. Agent setup prepares the test but does not launch an AI.</p></section><h2>Intake attempts</h2>'+runHistory(runs.filter(r=>r.scenario_id===intakeScenario))+
-  '<details><summary>More scenarios and other runs</summary><div class="grid">'+cases.filter(s=>s.id!==intakeScenario).map(s=>'<article class="card"><h3>'+esc(s.name)+'</h3><p>'+esc(s.description)+'</p><div class="actions">'+btn('Create run','new-run','data-id="'+esc(s.id)+'"')+btn('Validate fixture','reference','data-id="'+esc(s.id)+'"')+'</div>'+runHistory(runs.filter(r=>r.scenario_id===s.id))+'</article>').join('')+'</div></details>';
-}
-function inspectRecords(r){
-  const name=x=>x?.name||x?.title||x?.subject||x?.summary||x?.body||'Record';
-  const details=x=>pretty(Object.fromEntries(Object.entries(x||{}).filter(([k])=>!['base64','history','recording'].includes(k))));
-  const changes=r.changes.map(e=>'<details><summary>'+esc(e.action+' · '+e.entity+' · '+name(e.after||e.before))+'</summary><p>Before</p>'+details(e.before)+'<p>After</p>'+details(e.after)+'</details>').join('');
-  const groups=Object.entries(schemas).filter(([k])=>r.state[k]?.length).map(([k])=>'<details><summary>'+esc(k)+' ('+r.state[k].length+')</summary>'+r.state[k].map(x=>'<details><summary>'+esc(name(x))+'</summary>'+details(x)+'</details>').join('')+'</details>').join('');
-  return '<details class="card"><summary>Inspect records</summary><p class="hint">Read-only records for this attempt. Your firm is unchanged.</p><h3>What changed</h3>'+(changes||'<p>No business records changed.</p>')+'<h3>Records in this attempt</h3>'+groups+'</details>';
-}
-function showIntakeRun(r){
-  const result=r.results.at(-1);
-  $('#page-description').textContent=r.execution_mode==='reference_fixture'?'Scripted example · not an AI evaluation':'External agent attempt';
-  const lead=r.state.leads[0], caseRecord=r.state.matters.find(m=>m.id===lead?.matter_id), person=r.state.contacts.find(c=>c.id===caseRecord?.contact_id);
-  $('#content').innerHTML=btn('Back to evaluation lab','back-lab')+'<section class="card"><h2>'+esc(lead?.name||'Website inquiry')+'</h2><p>'+esc(lead?.summary)+'</p><p>'+esc(caseRecord?'Converted to '+caseRecord.title+' · '+(person?.name||'No contact'):'Awaiting conversion to a contact and a potential case.')+'</p></section>'+
-  (result?'<section class="card"><h2>'+esc(result.passed)+' of '+esc(result.total)+' checks passed</h2>'+result.checks.map(c=>'<details><summary>'+badge(c.verdict,c.verdict==='passed'?'':'bad')+' '+esc(c.label)+'</summary>'+pretty(c.evidence)+'</details>').join('')+'</section>':'<div class="actions">'+btn(r.status==='finished'?'Evaluate results':'Finish and evaluate','intake-evaluate','data-id="'+esc(r.id)+'"','primary')+'</div><p class="hint">Evaluate after the agent has worked. Finishing locks this attempt.</p>')+inspectRecords(r);
-}
-async function showRun(id){selectedRun=id;const r=await op('run.inspect',{id});$('#page-title').textContent=r.scenario.name+' · Attempt '+r.attempt_number;$('#page-description').textContent=r.execution_mode==='reference_fixture'?'Scripted example':'External agent attempt';
-if(r.watch_mode){await enterWatch(id);return}
-if(r.scenario.id===intakeScenario){showIntakeRun(r);return}
-$('#content').innerHTML=btn('← All scenarios','back-lab')+'<div class="callout">'+esc(r.assignment)+'</div><div class="actions">'+(r.status==='running'?btn('Caller speaks','actor','data-id="'+id+'"')+btn('Human role-play','roleplay','data-id="'+id+'"')+btn('Finish & freeze','finish','data-id="'+id+'"','primary'):btn('Evaluate frozen evidence','grade','data-id="'+id+'"','primary'))+btn('Export evidence','export','data-id="'+id+'"')+btn('Add expert review','review','data-id="'+id+'"')+'</div><div class="section-title"><h2>Conversation</h2></div><section class="card">'+r.state.turns.map(t=>'<div class="bubble '+(t.speaker==='agent'?'agent':'')+'"><span class="speaker">'+esc(t.speaker)+'</span>'+esc(t.text)+'</div>').join('')+'</section><div class="section-title"><h2>Evaluation results</h2></div>'+r.results.map(result=>'<section class="card"><div class="detail-header"><h2>'+badge(result.status,result.status==='passed'?'':'bad')+' '+result.passed+'/'+result.total+' checks</h2><span class="hint">Grader '+result.grader_version+'</span></div>'+result.checks.map(c=>'<details><summary>'+badge(c.verdict,c.verdict==='passed'?'':'bad')+' '+esc(c.label)+'</summary><p class="hint">'+esc(c.dimension)+'</p>'+pretty(c.evidence)+'</details>').join('')+'<div class="callout warning">'+esc(result.semantic_review.reason)+'</div></section>').join('')+(!r.results.length?empty('No grades yet. Finish this run, then evaluate its frozen evidence.'):'')+'<div class="section-title"><h2>Expert reviews</h2></div>'+r.reviews.map(x=>'<div class="card"><h3>'+esc(x.reviewer)+' · '+esc(x.verdict)+'</h3><p>'+esc(x.reason)+'</p></div>').join('')+'<details><summary>Actions and state changes ('+r.state.events.length+')</summary>'+pretty(r.state.events)+'</details><details><summary>Scenario facts — controller only</summary>'+pretty(r.scenario)+'</details>'+inspectRecords(r)}
 function renderConsole(){$('#content').innerHTML='<div class="callout">Operations are the shared contract for UI, HTTP, MCP and CLI. Controller-only operations are never exposed to evaluated agents.</div><div class="card"><label>Operation<select id="op-name">'+operations.map(x=>'<option value="'+x.name+'">'+esc(x.name)+' — '+esc(x.label)+'</option>').join('')+'</select></label><label>Arguments (JSON)<textarea id="op-args" rows="7">'+esc(JSON.stringify({world},null,2))+'</textarea></label>'+btn('Execute operation','execute','','primary')+'<p class="hint">CLI: firm-lab call OPERATION --json \'{...}\'</p><div id="op-result"></div></div><details><summary>Full operation registry</summary>'+pretty(operations)+'</details>'}
 function fieldHTML(key,spec,value){let input='';const typ=spec.type, req=spec.required?'required':'';
 if(spec.ref){input='<select name="'+key+'" '+req+'><option value="">Choose…</option>'+state.data[spec.ref].map(r=>'<option value="'+r.id+'" '+(r.id===value?'selected':'')+'>'+esc(r.name||r.title||r.id)+'</option>').join('')+'</select>'}
@@ -129,16 +96,8 @@ function display(title,body){modal(title,body,async()=>{});$('#modal-save').hidd
 function recordForm(entity,id,matter){const record=id?state.data[entity].find(x=>x.id===id):{};if(id&&(state.frozen||session.role==='observer'||entity==='escalations'||(entity==='messages'&&record.status!=='drafted'))){display('Record details',pretty(record));return}const fields=Object.entries(schemas[entity]).filter(([k])=>!(entity==='leads'&&['status','matter_id'].includes(k))&&!(entity==='messages'&&k==='direction'));const initial={...Object.fromEntries(fields.filter(([k,v])=>'default'in v).map(([k,v])=>[k,v.default])),...record};if(matter)initial.matter_id=matter;if(entity==='messages'&&matter){const m=state.data.matters.find(x=>x.id===matter);initial.to=state.data.contacts.find(x=>x.id===m?.contact_id)?.email||'';initial.subject=state.policy.ack_subject;initial.body=state.policy.ack_body}if(entity==='tasks'&&!id)initial.due_at=new Date(new Date(state.clock).getTime()+3600000).toISOString();
 modal((id?'Edit ':'Create ')+entity.replace(/s$/,''),'<div class="form-grid">'+fields.map(([k,v])=>fieldHTML(k,v,initial[k])).join('')+'</div>'+(entity==='documents'&&id?'<details><summary>Earlier versions</summary>'+pretty(record.history)+'</details>':''),async fd=>{const data={};for(const[k,v]of fields){if(v.type==='boolean')data[k]=fd.has(k);else if(v.type==='json')data[k]=JSON.parse(fd.get(k)||'{}');else data[k]=fd.get(k)||''}await op(id?'records.update':'records.create',{entity,id,version:record.version,data})})}
 async function action(el){const a=el.dataset.action,id=el.dataset.id,e=el.dataset.entity;
-if(watching)return watchAction(el);
-if(id===intakeScenario && ['reference','new-run'].includes(a)){
- el.disabled=true;try{
- const mode=a==='reference'?'scripted':'external';
- const r=await op('run.create',{scenario_id:id,watch_mode:mode});
- await enterWatch(r.id);
- if(mode==='external')display('Agent connection details','<p>No agent has started. Submit Jamie’s form, then connect your agent with this attempt-only token.</p>'+pretty({assignment:r.assignment,world:r.world,agent_token:r.agent_token}));
- }finally{el.disabled=false}return;
-}
-if(a==='page'){page=el.dataset.page;selectedMatter=null;selectedRun=null;await refresh()}
+if(a==='page'&&el.dataset.page==='lab'){location.assign('/lab');return}
+if(a==='page'){page=el.dataset.page;selectedMatter=null;await refresh()}
 else if(a==='create'||a==='edit')recordForm(e,a==='edit'?id:null,el.dataset.matter);
 else if(a==='matter'){selectedMatter=id;page='matters';render()}
 else if(a==='back-matters'){selectedMatter=null;render()}
@@ -156,27 +115,16 @@ else if(a==='turn'){modal('Add agent speech',fieldHTML('text',{label:'Agent mess
 else if(a==='recording'){modal('Attach test audio','<p class="hint">Upload an existing test recording (maximum 5 MB). This is not live call capture.</p><label>Audio file<input name="audio" type="file" accept="audio/*" required></label>',async fd=>{const file=fd.get('audio');if(file.size>5*1024*1024)throw Error('Maximum 5 MB');const base64=await new Promise((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>resolve(reader.result.split(',')[1]);reader.onerror=reject;reader.readAsDataURL(file)});return op('recording.attach',{id,base64,mime:file.type})})}
 else if(a==='new-world'){modal('Create isolated world',fieldHTML('name',{label:'World name',required:true},'New firm')+fieldHTML('seed',{label:'Starting data',type:'select',options:['realistic','empty']},'realistic'),async fd=>{world=(await op('world.create',Object.fromEntries(fd))).id})}
 else if(a==='clone-world'){world=(await op('world.clone',{name:state.name+' copy'})).id;await loadWorlds();await refresh()}
-else if(a==='reset-demo'){modal('Start fresh with an empty demo?','<div class="callout warning">This permanently deletes all inquiries, contacts, cases, tasks, messages, appointments, documents, and conversations in the website demo firm.</div><p>Basic staff, the intake form, firm settings, workflow templates, and the simulation clock return to defaults. No sample cases are added. Your login, other worlds, and evaluation results are unchanged.</p>',async()=>{await op('world.reset',{world:session.demo_world,seed:'empty'});world=session.demo_world;selectedMatter=null;selectedRun=null;page='overview'},'Clear demo and start fresh')}
-else if(a==='reset'){modal('Reset this world','<div class="callout warning">This replaces business records in the selected demo world and restores firm settings to defaults. Other worlds and historical run evidence are not changed.</div>'+fieldHTML('seed',{label:'Starting dataset',type:'select',options:['empty','realistic']},'empty'),async fd=>{await op('world.reset',{seed:fd.get('seed')});selectedMatter=null;selectedRun=null;page='overview'},'Reset this world')}
+else if(a==='reset-demo'){modal('Start fresh with an empty demo?','<div class="callout warning">This permanently deletes all inquiries, contacts, cases, tasks, messages, appointments, documents, and conversations in the website demo firm.</div><p>Basic staff, the intake form, firm settings, workflow templates, and the simulation clock return to defaults. No sample cases are added. Your login, other worlds, and evaluation results are unchanged.</p>',async()=>{await op('world.reset',{world:session.demo_world,seed:'empty'});world=session.demo_world;selectedMatter=null;page='overview'},'Clear demo and start fresh')}
+else if(a==='reset'){modal('Reset this world','<div class="callout warning">This replaces business records in the selected demo world and restores firm settings to defaults. Other worlds and historical run evidence are not changed.</div>'+fieldHTML('seed',{label:'Starting dataset',type:'select',options:['empty','realistic']},'empty'),async fd=>{await op('world.reset',{seed:fd.get('seed')});selectedMatter=null;page='overview'},'Reset this world')}
 else if(a==='clock'){modal('Advance simulated time',fieldHTML('minutes',{label:'Minutes',required:true},'60'),async fd=>op('clock.advance',{minutes:Number(fd.get('minutes'))}))}
 else if(a==='grant'){modal('Issue world-scoped access',fieldHTML('role',{label:'Role',type:'select',options:['intake','attorney','observer']},'intake')+fieldHTML('actor',{label:'Actor name',required:true},'external-agent'),async fd=>{const g=await op('grant.create',Object.fromEntries(fd));setTimeout(()=>display('Scoped access token','<p>This token can access only this world. Store it securely; it is shown once.</p>'+pretty(g)),100)})}
-else if(a==='new-run'){el.disabled=true;try{const r=await op('run.create',{scenario_id:id});selectedRun=r.id;await renderLab();display('Run created — agent access',id===intakeScenario?'<p>Your test inquiry is ready. Connect your external agent using this test-only access token. No agent has started yet.</p><details><summary>Agent connection details</summary>'+pretty({assignment:r.assignment,agent_token:r.agent_token,world:r.world})+'</details>':'<p>Give the evaluated agent this scoped token, not your controller token.</p>'+pretty(r))}finally{el.disabled=false}}
-else if(a==='reference'){el.disabled=true;try{const r=await op('run.reference',{scenario_id:id});selectedRun=r.id;await renderLab();notify('Reference fixture '+r.result.status)}finally{el.disabled=false}}
-else if(a==='observe')await showRun(id);
-else if(a==='back-lab'){selectedRun=null;await renderLab()}
-else if(a==='intake-evaluate'){el.disabled=true;try{await op('run.finish',{id});await op('run.grade',{id});await showRun(id)}finally{el.disabled=false}}
-else if(a==='actor'){await op('actor.respond',{id});await showRun(id)}
-else if(a==='roleplay'){modal('Speak as the caller',fieldHTML('text',{label:'Caller message',type:'textarea',required:true},''),async fd=>op('actor.respond',{id,text:fd.get('text')}),'Add caller turn')}
-else if(a==='finish'){await op('run.finish',{id});await showRun(id)}
-else if(a==='grade'){await op('run.grade',{id});await showRun(id)}
-else if(a==='export'){const r=await op('run.export',{id});const url=URL.createObjectURL(new Blob([JSON.stringify(r,null,2)],{type:'application/json'}));const link=document.createElement('a');link.href=url;link.download='run-'+id+'.json';link.click();URL.revokeObjectURL(url)}
-else if(a==='review'){modal('Append expert review',fieldHTML('reviewer',{label:'Reviewer',required:true},'')+fieldHTML('verdict',{label:'Verdict',type:'select',options:['pass','fail','uncertain']},'uncertain')+fieldHTML('reason',{label:'Evidence and rationale',type:'textarea',required:true},''),async fd=>op('review.add',{id,...Object.fromEntries(fd)}))}
 else if(a==='execute'){try{const r=await op($('#op-name').value,JSON.parse($('#op-args').value));$('#op-result').innerHTML=pretty(r)}catch(err){$('#op-result').textContent=err.message}}
 }
 document.addEventListener('click',e=>{const el=e.target.closest('[data-action]');if(!el)return;e.preventDefault();action(el).catch(err=>notify(err.message,true))});
-$('#world-select').onchange=async e=>{world=e.target.value;selectedMatter=null;selectedRun=null;await refresh()};
+$('#world-select').onchange=async e=>{world=e.target.value;selectedMatter=null;await refresh()};
 $('#refresh').onclick=()=>refresh().catch(e=>notify(e.message,true));
 $('#login-form').onsubmit=async e=>{e.preventDefault();try{await api('/api/login',{token:$('#token').value});$('#token').value='';await boot()}catch(err){$('#login-error').textContent=err.message}};
-$('#logout').onclick=async()=>{await api('/api/logout',{});sessionStorage.removeItem('watched-intake');location.reload()};
+$('#logout').onclick=async()=>{await api('/api/logout',{});location.reload()};
 $('#close-modal').onclick=$('#cancel-modal').onclick=()=>$('#modal').close();
 boot().catch(e=>notify(e.message,true));

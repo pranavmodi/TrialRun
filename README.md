@@ -12,7 +12,7 @@ From this directory:
     uv run firm-lab serve
 
 The default local address is http://127.0.0.1:8810.
-Open the operator workspace at / and the fictional PI website at /website.
+Open the standalone Evaluation Lab at / or /lab, the manual practice workspace at /workspace, and the fictional PI website at /website.
 
 In a second terminal, run:
 
@@ -66,7 +66,7 @@ The public website always submits to the dedicated demo world. It does not silen
 ## Evaluate an agent
 
 Evaluation lab opens on **Convert one website inquiry**. **Try scripted example**
-opens a read-only workspace for one attempt with an empty Leads inbox. Click **Submit Jamie’s website form**, then **Run scripted conversion**, then **Finish and evaluate**. Activity shows who made each change. The sidebar, including Contacts and Intake pipeline, follows the attempt until you select **Back to evaluation lab**. Reloading stays in the attempt. No AI runs in the scripted example.
+opens a scenario page with the attempt’s live workspace state and action log side by side. Click **Submit Jamie’s website form**, then **Run scripted conversion**, then **Finish and evaluate**. Activity shows who made each change. Open the attempt URL in another tab or share it with another signed-in controller. No firm navigation is needed. No AI runs in the scripted example.
 **Set up agent run** creates the same isolated intake test for your external
 agent. Save its scoped token, submit Jamie’s form, connect the agent and watch its actions update live, then select
 **Finish and evaluate**. The page shows the result and the evidence for each
@@ -75,17 +75,19 @@ and other runs**.
 
 Every run is a numbered attempt under its scenario. Attempt 1 and Attempt 2
 start from the same scenario setup, not from the previous attempt. Open **View
-attempt** to revisit its records (older attempts offer **Inspect records**). The test never changes
+attempt** to revisit its records and actions on the scenario page. The test never changes
 your firm. The header shows Harbor & Stone as plain text when it is the only firm. A switcher appears only for multiple firms and never includes test attempts.
+
+Choose **Run scenarios in parallel** in the library, select up to eight scenarios and click **Launch selected scenarios**. Up to four background scripts execute concurrently; additional jobs wait. Close a tab without stopping the work. Click **View attempt** for live records, actions and the final score. External-agent attempts can also overlap, each using its own token and agent process; the lab does not launch an LLM.
 
 For those other scenarios:
 
-1. Open Evaluation lab and choose Create run on a scenario.
+1. Open Evaluation lab and choose Set up agent run on a scenario.
 2. Copy the returned scoped token and assignment for the evaluated agent.
 3. Connect that agent through HTTP, MCP, or a browser signed in with its scoped token.
 4. Use Caller speaks for deterministic fixture speech, or Human role-play to supply natural caller messages. The agent writes its own turns and performs business operations.
 5. Use **View attempt** under the scenario to inspect its activity; private scenario facts are visible only to the controller.
-6. Finish & freeze the run, then Evaluate frozen evidence.
+6. Use Finish and evaluate to freeze and grade the evidence.
 7. Inspect each criterion and its evidence. Add an expert review if appropriate.
 
 **Validate fixture is not an AI run.** It uses a scenario-specific reference policy to prove that the environment and programmatic checks can be satisfied. It never claims model intelligence or real-world success.

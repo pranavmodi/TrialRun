@@ -1,0 +1,7 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>TrialRun · Evaluation Lab</title><link rel="stylesheet" href="/static/style.css"><link rel="stylesheet" href="/static/lab.css"></head>
+<body><div id="login" class="login-screen" hidden><form id="login-form" class="login-card"><p class="eyebrow">TRIALRUN</p><h1>Evaluation Lab</h1><p>Run scenarios and observe a simulated firm. Sign in with your lab access token.</p><label>Lab access token<input id="token" type="password" required autocomplete="off"></label><button class="primary">Open lab</button><p id="login-error" role="alert"></p></form></div>
+<div id="app" hidden><header class="lab-bar"><a href="/lab"><strong>TrialRun</strong> / Evaluation Lab</a><span><a href="/workspace">Open practice firm</a> · <button id="logout">Sign out</button></span></header>
+<main class="lab-main"><p class="eyebrow" id="section-kicker">EVALUATION LAB</p><h1 id="page-title">Scenario library</h1><p id="description"></p><div id="content"></div></main></div>
+<dialog id="modal"><header><h2 id="modal-title"></h2><button id="close-modal" aria-label="Close dialog">×</button></header><div id="modal-fields"></div></dialog>
+<div id="toast" role="status" hidden></div><script src="/static/lab.js"></script></body></html>
