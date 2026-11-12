@@ -66,16 +66,16 @@ The public website always submits to the dedicated demo world. It does not silen
 ## Evaluate an agent
 
 Evaluation lab opens on **Convert one website inquiry**. **Try scripted example**
-runs the reference conversion and shows five checks; it does not run an AI.
+opens a read-only workspace for one attempt with an empty Leads inbox. Click **Submit Jamie’s website form**, then **Run scripted conversion**, then **Finish and evaluate**. Activity shows who made each change. The sidebar, including Contacts and Intake pipeline, follows the attempt until you select **Back to evaluation lab**. Reloading stays in the attempt. No AI runs in the scripted example.
 **Set up agent run** creates the same isolated intake test for your external
-agent. Connect with its scoped token, let it process the inquiry, then select
+agent. Save its scoped token, submit Jamie’s form, connect the agent and watch its actions update live, then select
 **Finish and evaluate**. The page shows the result and the evidence for each
 check. Other scenarios and their run history are collapsed under **More scenarios
 and other runs**.
 
 Every run is a numbered attempt under its scenario. Attempt 1 and Attempt 2
 start from the same scenario setup, not from the previous attempt. Open **View
-attempt → Inspect records** to see changes and saved records without leaving
+attempt** to revisit its records (older attempts offer **Inspect records**). The test never changes
 your firm. The header shows Harbor & Stone as plain text when it is the only firm. A switcher appears only for multiple firms and never includes test attempts.
 
 For those other scenarios:

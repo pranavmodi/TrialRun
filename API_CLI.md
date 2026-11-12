@@ -63,8 +63,10 @@ Every operation has CLI form: firm-lab call OPERATION --json 'ARGUMENTS'.
 | recording.attach | C | id (conversation), mime, base64 | Attach up to 5 MB of test audio |
 | scenario.list | C | none | Scenario catalog including controller-private facts |
 | scenario.save | C | base_id, name, description, persona, options | Create a new scenario variant, preserving old version |
-| run.create | C | scenario_id, agent_metadata optional | Create isolated world and scoped agent token |
+| run.create | C | scenario_id, agent_metadata, watch_mode optional | Create an isolated attempt. For intake-only, watch_mode scripted or external starts before website submission. Only external setup returns an agent token. |
 | run.list | C | none | Run summaries with scenario ID, per-scenario attempt number and most recent grade outcome (null before grading). |
+| run.submit | C | id | Simulate the visitor submitting the form to this watched intake. Safe to retry. |
+| run.script | C | id | Convert the submitted inquiry using the scoped reference policy; scripted attempts only. Safe to retry. |
 | run.inspect | C | id | Read-only attempt number, state, business-record changes since setup, results and reviews; finished attempts use frozen evidence. |
 | actor.respond | C | id (run), text optional | Next scripted caller turn or human role-play |
 | run.finish | C | id | Freeze business state and evaluation evidence |
@@ -147,7 +149,7 @@ For the form-only scenario, the scoped agent can list leads and call `lead.conve
 
     firm-lab call run.reference --json '{"scenario_id":"intake-only"}'
 
-UI equivalents: **Try scripted example** → `run.reference`; **Set up agent run** → `run.create`; **Finish and evaluate** → `run.finish`, then `run.grade`. `run.list` includes `scenario_id` so the dashboard or a CLI client can group new and historical attempts.
+UI equivalents: **Try scripted example** → `run.create` with `watch_mode: "scripted"`; **Set up agent run** uses `watch_mode: "external"`. Next call `run.submit` with the run ID. For scripted runs call `run.script`; otherwise connect your own agent. Use `run.inspect` between steps to see the current records and events since `timeline_start`. The noninteractive `run.reference` still runs the whole fixture at once; **Finish and evaluate** → `run.finish`, then `run.grade`. `run.list` includes `scenario_id` so the dashboard or a CLI client can group new and historical attempts.
     firm-lab call run.inspect --json '{"id":"RUN_ID"}'
     firm-lab call actor.respond --json '{"id":"RUN_ID","text":"My email has changed. Can you update it?"}'
     firm-lab call run.finish --json '{"id":"RUN_ID"}'

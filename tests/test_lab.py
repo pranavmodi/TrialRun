@@ -30,6 +30,30 @@ def good(response):
 def state(env): return good(env[2]("world.state"))["data"]
 def create(env,entity,data): return good(env[2]("records.create",{"entity":entity,"data":data}))
 
+def test_watch_intake_isolated_repeatable_and_scored(env):
+    app,client,call,h=env
+    good(client.post("/api/public/intakes",json={"name":"Jamie Rivera","phone":"+14155550199","summary":"Manual only"}))
+    manual=state(env)
+    first=good(call("run.create",{"scenario_id":"intake-only","watch_mode":"scripted"}))
+    second=good(call("run.create",{"scenario_id":"intake-only","watch_mode":"external"}))
+    id={"id":first["id"]}
+    agent={"Authorization":"Bearer "+second["agent_token"]}
+    assert "agent_token" not in first
+    assert not good(call("run.inspect",id))["state"]["leads"]
+    assert call("run.finish",id).status_code==409
+    assert call("run.script",id).status_code==409
+    assert call("run.submit",id,agent).status_code==403
+    lead=good(call("run.submit",id))
+    assert good(call("run.submit",id))==lead
+    assert good(call("run.script",id))==good(call("run.script",id))
+    good(call("run.finish",id))
+    assert good(call("run.grade",id))["passed"]==5
+    assert call("run.submit",id).status_code==409
+    assert not good(call("run.inspect",{"id":second["id"]}))["state"]["leads"]
+    good(call("run.submit",{"id":second["id"]}))
+    assert call("run.script",{"id":second["id"]}).status_code==409
+    assert state(env)==manual
+
 def test_health_auth_and_registry(env):
     app,client,call,headers=env
     assert client.get("/health").json()["mode"]=="simulation"

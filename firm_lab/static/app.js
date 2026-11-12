@@ -27,7 +27,7 @@ async function op(name,args={}){return api('/api/ops/'+name,{world,...args})}
 function notify(text,error=false){const t=$('#toast');t.textContent=text;t.className=error?'error':'';t.hidden=false;clearTimeout(notify.timer);notify.timer=setTimeout(()=>t.hidden=true,6000)}
 async function boot(){try{session=await api('/api/session')}catch{return}schemas=await api('/api/schema');operations=await api('/api/operations');$('#login').hidden=true;$('#app').hidden=false;$('#role-badge').textContent=session.role;
 const nav=$('#nav');nav.innerHTML=sections.filter(s=>session.role==='controller'||!['lab','console'].includes(s[0])).map(s=>btn(s[1],'page','data-page="'+s[0]+'"')).join('');
-await loadWorlds();await refresh()}
+await loadWorlds();const saved=session.role==='controller'&&sessionStorage.getItem('watched-intake');if(saved){await enterWatch(saved);return}await refresh()}
 async function loadWorlds(){
  const worlds=session.role==='controller'?await op('world.list',{scope:'firms'}):[{id:session.world,name:'Agent workspace'}];
  const current=worlds.find(w=>w.id===(world||session.world||session.demo_world))||worlds.find(w=>w.id===session.demo_world)||worlds[0];
@@ -38,7 +38,7 @@ async function loadWorlds(){
  label.textContent=name(current);label.hidden=worlds.length>1;select.hidden=!label.hidden;
  select.replaceChildren(...(select.hidden?[]:worlds.map(w=>new Option(name(w),w.id,false,w.id===world))));
 }
-async function refresh(){state=await op('world.state');$('#clock').textContent=when(state.clock)+' · simulation';render();if(page==='lab')await renderLab();if(page==='events')await renderEvents()}
+async function refresh(){if(watching)return refreshWatch(true);state=await op('world.state');$('#clock').textContent=when(state.clock)+' · simulation';render();if(page==='lab')await renderLab();if(page==='events')await renderEvents()}
 function render(){const sec=sections.find(s=>s[0]===page);$('#page-title').textContent=sec[2];$('#page-description').textContent=sec[3];$('#section-kicker').textContent=['lab','console','events'].includes(page)?'OBSERVATION & CONTROL':'FIRM OPERATIONS';$('#reset-demo').hidden=session.role!=='controller'||world!==session.demo_world||state.frozen;
 document.querySelectorAll('#nav button').forEach(b=>b.classList.toggle('active',b.dataset.page===page));$('#page-actions').innerHTML='';const root=$('#content');
 if(state.frozen)$('#page-actions').innerHTML=badge('Frozen evidence','warn');
@@ -95,7 +95,7 @@ async function renderLab(){
   $('#page-description').textContent='Start with one job: turn a website inquiry into an accurate intake record.';
   const starter=cases.find(s=>s.id===intakeScenario);
   if(!starter){$('#content').innerHTML=empty('The intake scenario is not installed. Restart the lab service.');return}
-  $('#content').innerHTML='<section class="card"><p class="eyebrow">INTAKE TEST</p><h2>'+esc(starter.name)+'</h2><p>Jamie submitted a form. Create one contact and one potential case using only the details Jamie provided.</p><p>No qualification, messages, assignments, or callbacks.</p><div class="actions">'+btn('Try scripted example','reference','data-id="'+intakeScenario+'"','primary')+btn('Set up agent run','new-run','data-id="'+intakeScenario+'"')+'</div><p class="hint">The example runs immediately and shows the checks. Every attempt starts with the same fictional inquiry. Agent setup prepares the test but does not launch an AI.</p></section><h2>Intake attempts</h2>'+runHistory(runs.filter(r=>r.scenario_id===intakeScenario))+
+  $('#content').innerHTML='<section class="card"><p class="eyebrow">INTAKE TEST</p><h2>'+esc(starter.name)+'</h2><p>Watch Jamie submit a website form. Create one contact and one potential case using only the details Jamie provided.</p><p>No qualification, messages, assignments, or callbacks.</p><div class="actions">'+btn('Try scripted example','reference','data-id="'+intakeScenario+'"','primary')+btn('Set up agent run','new-run','data-id="'+intakeScenario+'"')+'</div><p class="hint">Watch each step in the attempt’s own workspace, starting with an empty Leads inbox. Agent setup prepares the test but does not launch an AI.</p></section><h2>Intake attempts</h2>'+runHistory(runs.filter(r=>r.scenario_id===intakeScenario))+
   '<details><summary>More scenarios and other runs</summary><div class="grid">'+cases.filter(s=>s.id!==intakeScenario).map(s=>'<article class="card"><h3>'+esc(s.name)+'</h3><p>'+esc(s.description)+'</p><div class="actions">'+btn('Create run','new-run','data-id="'+esc(s.id)+'"')+btn('Validate fixture','reference','data-id="'+esc(s.id)+'"')+'</div>'+runHistory(runs.filter(r=>r.scenario_id===s.id))+'</article>').join('')+'</div></details>';
 }
 function inspectRecords(r){
@@ -113,6 +113,7 @@ function showIntakeRun(r){
   (result?'<section class="card"><h2>'+esc(result.passed)+' of '+esc(result.total)+' checks passed</h2>'+result.checks.map(c=>'<details><summary>'+badge(c.verdict,c.verdict==='passed'?'':'bad')+' '+esc(c.label)+'</summary>'+pretty(c.evidence)+'</details>').join('')+'</section>':'<div class="actions">'+btn(r.status==='finished'?'Evaluate results':'Finish and evaluate','intake-evaluate','data-id="'+esc(r.id)+'"','primary')+'</div><p class="hint">Evaluate after the agent has worked. Finishing locks this attempt.</p>')+inspectRecords(r);
 }
 async function showRun(id){selectedRun=id;const r=await op('run.inspect',{id});$('#page-title').textContent=r.scenario.name+' · Attempt '+r.attempt_number;$('#page-description').textContent=r.execution_mode==='reference_fixture'?'Scripted example':'External agent attempt';
+if(r.watch_mode){await enterWatch(id);return}
 if(r.scenario.id===intakeScenario){showIntakeRun(r);return}
 $('#content').innerHTML=btn('← All scenarios','back-lab')+'<div class="callout">'+esc(r.assignment)+'</div><div class="actions">'+(r.status==='running'?btn('Caller speaks','actor','data-id="'+id+'"')+btn('Human role-play','roleplay','data-id="'+id+'"')+btn('Finish & freeze','finish','data-id="'+id+'"','primary'):btn('Evaluate frozen evidence','grade','data-id="'+id+'"','primary'))+btn('Export evidence','export','data-id="'+id+'"')+btn('Add expert review','review','data-id="'+id+'"')+'</div><div class="section-title"><h2>Conversation</h2></div><section class="card">'+r.state.turns.map(t=>'<div class="bubble '+(t.speaker==='agent'?'agent':'')+'"><span class="speaker">'+esc(t.speaker)+'</span>'+esc(t.text)+'</div>').join('')+'</section><div class="section-title"><h2>Evaluation results</h2></div>'+r.results.map(result=>'<section class="card"><div class="detail-header"><h2>'+badge(result.status,result.status==='passed'?'':'bad')+' '+result.passed+'/'+result.total+' checks</h2><span class="hint">Grader '+result.grader_version+'</span></div>'+result.checks.map(c=>'<details><summary>'+badge(c.verdict,c.verdict==='passed'?'':'bad')+' '+esc(c.label)+'</summary><p class="hint">'+esc(c.dimension)+'</p>'+pretty(c.evidence)+'</details>').join('')+'<div class="callout warning">'+esc(result.semantic_review.reason)+'</div></section>').join('')+(!r.results.length?empty('No grades yet. Finish this run, then evaluate its frozen evidence.'):'')+'<div class="section-title"><h2>Expert reviews</h2></div>'+r.reviews.map(x=>'<div class="card"><h3>'+esc(x.reviewer)+' · '+esc(x.verdict)+'</h3><p>'+esc(x.reason)+'</p></div>').join('')+'<details><summary>Actions and state changes ('+r.state.events.length+')</summary>'+pretty(r.state.events)+'</details><details><summary>Scenario facts — controller only</summary>'+pretty(r.scenario)+'</details>'+inspectRecords(r)}
 function renderConsole(){$('#content').innerHTML='<div class="callout">Operations are the shared contract for UI, HTTP, MCP and CLI. Controller-only operations are never exposed to evaluated agents.</div><div class="card"><label>Operation<select id="op-name">'+operations.map(x=>'<option value="'+x.name+'">'+esc(x.name)+' — '+esc(x.label)+'</option>').join('')+'</select></label><label>Arguments (JSON)<textarea id="op-args" rows="7">'+esc(JSON.stringify({world},null,2))+'</textarea></label>'+btn('Execute operation','execute','','primary')+'<p class="hint">CLI: firm-lab call OPERATION --json \'{...}\'</p><div id="op-result"></div></div><details><summary>Full operation registry</summary>'+pretty(operations)+'</details>'}
@@ -128,6 +129,15 @@ function display(title,body){modal(title,body,async()=>{});$('#modal-save').hidd
 function recordForm(entity,id,matter){const record=id?state.data[entity].find(x=>x.id===id):{};if(id&&(state.frozen||session.role==='observer'||entity==='escalations'||(entity==='messages'&&record.status!=='drafted'))){display('Record details',pretty(record));return}const fields=Object.entries(schemas[entity]).filter(([k])=>!(entity==='leads'&&['status','matter_id'].includes(k))&&!(entity==='messages'&&k==='direction'));const initial={...Object.fromEntries(fields.filter(([k,v])=>'default'in v).map(([k,v])=>[k,v.default])),...record};if(matter)initial.matter_id=matter;if(entity==='messages'&&matter){const m=state.data.matters.find(x=>x.id===matter);initial.to=state.data.contacts.find(x=>x.id===m?.contact_id)?.email||'';initial.subject=state.policy.ack_subject;initial.body=state.policy.ack_body}if(entity==='tasks'&&!id)initial.due_at=new Date(new Date(state.clock).getTime()+3600000).toISOString();
 modal((id?'Edit ':'Create ')+entity.replace(/s$/,''),'<div class="form-grid">'+fields.map(([k,v])=>fieldHTML(k,v,initial[k])).join('')+'</div>'+(entity==='documents'&&id?'<details><summary>Earlier versions</summary>'+pretty(record.history)+'</details>':''),async fd=>{const data={};for(const[k,v]of fields){if(v.type==='boolean')data[k]=fd.has(k);else if(v.type==='json')data[k]=JSON.parse(fd.get(k)||'{}');else data[k]=fd.get(k)||''}await op(id?'records.update':'records.create',{entity,id,version:record.version,data})})}
 async function action(el){const a=el.dataset.action,id=el.dataset.id,e=el.dataset.entity;
+if(watching)return watchAction(el);
+if(id===intakeScenario && ['reference','new-run'].includes(a)){
+ el.disabled=true;try{
+ const mode=a==='reference'?'scripted':'external';
+ const r=await op('run.create',{scenario_id:id,watch_mode:mode});
+ await enterWatch(r.id);
+ if(mode==='external')display('Agent connection details','<p>No agent has started. Submit Jamie’s form, then connect your agent with this attempt-only token.</p>'+pretty({assignment:r.assignment,world:r.world,agent_token:r.agent_token}));
+ }finally{el.disabled=false}return;
+}
 if(a==='page'){page=el.dataset.page;selectedMatter=null;selectedRun=null;await refresh()}
 else if(a==='create'||a==='edit')recordForm(e,a==='edit'?id:null,el.dataset.matter);
 else if(a==='matter'){selectedMatter=id;page='matters';render()}
@@ -167,6 +177,6 @@ document.addEventListener('click',e=>{const el=e.target.closest('[data-action]')
 $('#world-select').onchange=async e=>{world=e.target.value;selectedMatter=null;selectedRun=null;await refresh()};
 $('#refresh').onclick=()=>refresh().catch(e=>notify(e.message,true));
 $('#login-form').onsubmit=async e=>{e.preventDefault();try{await api('/api/login',{token:$('#token').value});$('#token').value='';await boot()}catch(err){$('#login-error').textContent=err.message}};
-$('#logout').onclick=async()=>{await api('/api/logout',{});location.reload()};
+$('#logout').onclick=async()=>{await api('/api/logout',{});sessionStorage.removeItem('watched-intake');location.reload()};
 $('#close-modal').onclick=$('#cancel-modal').onclick=()=>$('#modal').close();
 boot().catch(e=>notify(e.message,true));

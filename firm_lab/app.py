@@ -102,13 +102,7 @@ def create_app(data_root=None):
     @app.post("/api/public/intakes")
     async def public_intake(request:Request):
         data=await request.json()
-        allowed={"name","email","phone","summary","injury","incident_date","location","consent"}
-        if not isinstance(data,dict) or set(data)-allowed: raise LabError("Unexpected intake fields")
-        with store.world(demo_id) as c:
-            form=rows(c,"forms")[0]
-            for field in form["fields"]:
-                if field.get("required") and not data.get(field["key"]): raise LabError(field["key"]+" is required")
-        record=lab.execute("records.create",{"world":demo_id,"entity":"leads","data":{**data,"source":"PI website"}},{"role":"controller","actor":"website","world":None},request.headers.get("idempotency-key"))
+        record=lab.website_submission(demo_id,data,request.headers.get("idempotency-key"))
         return {"reference":record["id"],"message":"Your test inquiry was saved in the simulated firm's leads inbox. No real firm has been contacted."}
 
     @app.post("/mcp")

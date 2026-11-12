@@ -22,6 +22,15 @@ class Service:
     def __init__(self, store):
         self.store = store
 
+    def website_submission(self, world, data, key=None):
+        allowed={"name","email","phone","summary","injury","incident_date","location","consent"}
+        if not isinstance(data,dict) or set(data)-allowed: raise LabError("Unexpected intake fields")
+        with self.store.world(world) as c:
+            for field in rows(c,"forms")[0]["fields"]:
+                if field.get("required") and not data.get(field["key"]): raise LabError(field["key"]+" is required")
+        return self.execute("records.create",{"world":world,"entity":"leads","data":{**data,"source":"PI website"}},
+                            {"role":"controller","actor":"website","world":None},key)
+
     def execute(self, name, args, principal, key=None):
         started=now()
         try:

@@ -48,6 +48,11 @@ def snapshot(store,world):
     with store.world(world) as c:
         return {**{t:rows(c,t) for t in TABLES},"meta":meta(c),"events":rows(c,"events")}
 
+def intake_form(person):
+    return {**{k:person[k] for k in ("name","email","phone","consent")},
+            "summary":"Rear-ended at a traffic light.","incident_date":"2026-11-06",
+            "location":"San Francisco","injury":"My shoulder is sore. I have not seen a doctor yet."}
+
 class LabService(Service):
     def install_scenarios(self):
         with self.store.control() as c:
@@ -77,8 +82,11 @@ class LabService(Service):
     @operation("run.create","Create isolated scenario run",ADMIN,True,True)
     def run_create(self,a,p):
         with self.store.control() as c: scenario=copy.deepcopy(get(c,"scenarios",a["scenario_id"]))
+        watch=a.get("watch_mode")
+        if watch is not None and (scenario["id"]!="intake-only" or watch not in ("external","scripted")):
+            raise LabError("Choose external or scripted watch mode for the intake scenario")
         world=self._create_world({"name":scenario["name"],"seed":"realistic"},kind="attempt")["id"]
-        grant=self.grant_create({"world":world,"role":"intake","actor":"evaluated-agent"},p)
+        grant=self.grant_create({"world":world,"role":"intake","actor":"evaluated-agent"},p) if watch!="scripted" else None
         with self.store.world(world) as c:
             contact=next(x for x in rows(c,"contacts") if x["phone"]=="+14155550122")
             matter=next(x for x in rows(c,"matters") if x["contact_id"]==contact["id"])
@@ -96,7 +104,7 @@ class LabService(Service):
                 conversation_id=self.create(c,"conversations",{"title":scenario["name"]+" — "+scenario["persona"]["name"]},{"actor":"controller"})["id"]
                 intro="Hello, I submitted a website inquiry about my accident." if options.get("new_person") else "Hello, I called last week about my accident. I'm hoping someone can help me with an update."
                 self.create(c,"turns",{"conversation_id":conversation_id,"speaker":"caller","text":intro},{"actor":"simulated caller"})
-            if options.get("new_person"):
+            if options.get("new_person") and not watch:
                 person=scenario["persona"]
                 details={"incident_date":"2026-11-06","location":"San Francisco","injury":"My shoulder is sore. I have not seen a doctor yet."} if options.get("intake_only") else {}
                 self.create(c,"leads",{"name":person["name"],"phone":person["phone"],"email":person["email"],"summary":"Rear-ended at a traffic light.","consent":person["consent"],"source":"PI website",**details},{"actor":"website"})
@@ -112,9 +120,31 @@ class LabService(Service):
              "assignment":scenario["assignment"],"target_contact":None if options.get("new_person") else contact["id"],"target_matter":None if options.get("new_person") else matter["id"],
              "conversation_id":conversation_id,"callback_due":due,"initial":snapshot(self.store,world),
              "actor_step":0,"execution_mode":"external","agent_metadata":a.get("agent_metadata",{"name":"external agent","model":"unspecified"})}
+        if watch:
+            run.update(watch_mode=watch,visitor_form=intake_form(scenario["persona"]),submission=None,execution_mode="reference_fixture" if watch=="scripted" else "external")
         with self.store.control() as c: put(c,"runs",run)
         return {"id":run["id"],"world":world,"assignment":run["assignment"],"conversation_id":conversation_id,
-                "agent_token":grant["token"],"status":"running"}
+                **({"agent_token":grant["token"]} if watch!="scripted" else {}),"status":"running"}
+
+    @operation("run.submit","Simulate the visitor submitting the website form",ADMIN,True,True)
+    def submit(self,a,p):
+        with self.store.control() as c:
+            run=get(c,"runs",a["id"])
+            if not run.get("watch_mode") or run["status"]!="running": raise LabError("Not an open watched intake",409)
+            if run["submission"]: return run["submission"]
+            run["submission"]=self.website_submission(run["world"],run["visitor_form"],"website-"+run["id"])
+            put(c,"runs",run)
+            return run["submission"]
+
+    @operation("run.script","Perform the scripted intake conversion",ADMIN,True,True)
+    def script(self,a,p):
+        with self.store.control() as c:
+            run=get(c,"runs",a["id"])
+            if run.get("watch_mode")!="scripted" or run["status"]!="running" or not run["submission"]:
+                raise LabError("Submit the form in an open scripted attempt first",409)
+            agent={"actor":"reference-script","role":"intake","world":run["world"]}
+            self.execute("records.get",{"entity":"leads","id":run["submission"]["id"]},agent)
+            return self.execute("lead.convert",{"id":run["submission"]["id"]},agent,"convert-"+run["id"])
 
     @operation("run.list","List runs",ADMIN,control=True)
     def run_list(self,a,p):
@@ -139,7 +169,7 @@ class LabService(Service):
             reviews=[x for x in rows(c,"reviews") if x["run_id"]==r["id"]]
         state=r.get("final") or snapshot(self.store,r["world"])
         changes=[e for e in state["events"][len(r["initial"]["events"]):] if e["entity"] in TABLES]
-        return {**{k:v for k,v in r.items() if k not in ("initial","final")},"attempt_number":number,"changes":changes,"state":state,"results":results,"reviews":reviews}
+        return {**{k:v for k,v in r.items() if k not in ("initial","final")},"attempt_number":number,"timeline_start":len(r["initial"]["events"]),"changes":changes,"state":state,"results":results,"reviews":reviews}
 
     @operation("actor.respond","Advance scripted participant",ADMIN,True,True)
     def actor(self,a,p):
@@ -168,6 +198,7 @@ class LabService(Service):
         with self.store.control() as control:
             r=get(control,"runs",a["id"])
             if r["status"]=="finished": return {"id":r["id"],"status":"finished"}
+            if r.get("watch_mode") and not r["submission"]: raise LabError("Submit the test inquiry before evaluation",409)
             with self.store.world(r["world"]) as c:
                 m=meta(c); m["frozen"]=True; put(c,"meta",m)
                 audit(c,"controller","run.finish","run",None,None)
@@ -184,7 +215,8 @@ class LabService(Service):
         def check(id,label,passed,dimension,evidence):
             checks.append({"id":id,"label":label,"verdict":"passed" if passed else "failed","dimension":dimension,"evidence":evidence})
         if options.get("intake_only"):
-            self._intake_checks(initial,final,check)
+            actor="reference-script" if run.get("watch_mode")=="scripted" else "evaluated-agent"
+            self._intake_checks(initial,final,check,run.get("submission"),actor)
             return self._save_grade(run,checks)
         contact=next((x for x in final["contacts"] if x["id"]==run["target_contact"] or (options.get("new_person") and x.get("phone")==person["phone"])),{})
         oldmatter=next((x for x in final["matters"] if x["id"]==run["target_matter"]),{})
@@ -235,8 +267,8 @@ class LabService(Service):
         return self._save_grade(run,checks)
 
     @staticmethod
-    def _intake_checks(initial,final,check):
-        source=initial["leads"][0]
+    def _intake_checks(initial,final,check,submission=None,actor="evaluated-agent"):
+        source=submission or initial["leads"][0]
         lead=next((r for r in final["leads"] if r["id"]==source["id"]),{})
         old={table:{r["id"] for r in initial[table]} for table in TABLES}
         fresh=lambda table:[r for r in final[table] if r["id"] not in old[table]]
@@ -246,7 +278,7 @@ class LabService(Service):
         events=final["events"][len(initial["events"]):]
         conversions=[e for e in events if e["entity"]=="leads" and e["record_id"]==source["id"]
                      and (e["before"] or {}).get("status")=="new" and (e["after"] or {}).get("status")=="converted"]
-        check("convert","Inquiry converted once to the new case",bool(case) and lead.get("status")=="converted" and lead.get("matter_id")==case["id"] and len(conversions)==1 and conversions[0]["actor"]=="evaluated-agent","business outcome",[e["id"] for e in conversions])
+        check("convert","Inquiry converted once to the new case",bool(case) and lead.get("status")=="converted" and lead.get("matter_id")==case["id"] and len(conversions)==1 and conversions[0]["actor"]==actor,"business outcome",[e["id"] for e in conversions])
         check("contact","One new contact with the submitted details",len(contacts)==1 and all(contact.get(k)==source.get(k) for k in ("name","phone","email","source")),"data integrity",[r["id"] for r in contacts])
         check("case","One potential case linked to that contact",bool(case and contact) and case.get("contact_id")==contact["id"] and case.get("stage")=="New inquiry" and not case.get("owner_id"),"business outcome",[r["id"] for r in matters])
         fields=("summary","injury","incident_date","location","consent")
@@ -289,7 +321,7 @@ class LabService(Service):
 
     @operation("run.reference","Run reference fixture policy",ADMIN,True,True)
     def reference(self,a,p):
-        created=self.run_create(a,p)
+        created=self.run_create({**a,"watch_mode":None},p)
         with self.store.control() as c:
             run=get(c,"runs",created["id"]); run["execution_mode"]="reference_fixture"; put(c,"runs",run)
         agent=self.store.authenticate(created["agent_token"])
