@@ -38,6 +38,10 @@ def scenarios():
     new=result[0]
     new["assignment"]="Handle the new website inquiry in the leads inbox. Create or link the correct contact and matter, record the caller's update, and arrange the requested callback."
     new["persona"].update(name="Jamie Rivera",phone="+14155550199",email="jamie@example.test",same_incident=False)
+    result.insert(0, {**copy.deepcopy(new), "id":"intake-only", "name":"Convert one website inquiry",
+        "description":"One new inquiry becomes one contact and one potential case.",
+        "assignment":"Process the new website inquiry. Convert it once into a new contact and potential case. Copy the submitted details as provided. Do not qualify, assign, contact anyone, or create follow-up work. Leave unrelated records unchanged.",
+        "options":{"new_person":True,"intake_only":True}})
     return result
 
 def snapshot(store,world):
@@ -87,12 +91,15 @@ class LabService(Service):
                 self.update(c,"staff",attorney["id"],{"available":False},attorney["version"],{"actor":"human operator"})
             if options.get("no_email"): self.update(c,"contacts",contact["id"],{"email":""},contact["version"],{"actor":"fixture"})
             if options.get("consent") is False: matter=self.update(c,"matters",matter["id"],{"consent":False},matter["version"],{"actor":"fixture"})
-            conversation=self.create(c,"conversations",{"title":scenario["name"]+" — "+scenario["persona"]["name"]},{"actor":"controller"})
-            intro="Hello, I submitted a website inquiry about my accident." if options.get("new_person") else "Hello, I called last week about my accident. I'm hoping someone can help me with an update."
-            self.create(c,"turns",{"conversation_id":conversation["id"],"speaker":"caller","text":intro},{"actor":"simulated caller"})
+            conversation_id=None
+            if not options.get("intake_only"):
+                conversation_id=self.create(c,"conversations",{"title":scenario["name"]+" — "+scenario["persona"]["name"]},{"actor":"controller"})["id"]
+                intro="Hello, I submitted a website inquiry about my accident." if options.get("new_person") else "Hello, I called last week about my accident. I'm hoping someone can help me with an update."
+                self.create(c,"turns",{"conversation_id":conversation_id,"speaker":"caller","text":intro},{"actor":"simulated caller"})
             if options.get("new_person"):
                 person=scenario["persona"]
-                self.create(c,"leads",{"name":person["name"],"phone":person["phone"],"email":person["email"],"summary":"Rear-ended at a traffic light.","consent":True,"source":"PI website"},{"actor":"website"})
+                details={"incident_date":"2026-11-06","location":"San Francisco","injury":"My shoulder is sore. I have not seen a doctor yet."} if options.get("intake_only") else {}
+                self.create(c,"leads",{"name":person["name"],"phone":person["phone"],"email":person["email"],"summary":"Rear-ended at a traffic light.","consent":person["consent"],"source":"PI website",**details},{"actor":"website"})
             if options.get("fault"):
                 put(c,"faults",{"id":uid(),"kind":options["fault"],"operation":"records.update","used":False})
             if options.get("delivery_fault"):
@@ -103,17 +110,17 @@ class LabService(Service):
                     "data":{"matter_id":matter["id"],"channel":"sms","to":"intake desk","body":"I can take a callback tomorrow morning. Please use my updated email."}})
         run={"id":uid(),"world":world,"scenario":scenario,"created_at":now(),"status":"running",
              "assignment":scenario["assignment"],"target_contact":None if options.get("new_person") else contact["id"],"target_matter":None if options.get("new_person") else matter["id"],
-             "conversation_id":conversation["id"],"callback_due":due,"initial":snapshot(self.store,world),
+             "conversation_id":conversation_id,"callback_due":due,"initial":snapshot(self.store,world),
              "actor_step":0,"execution_mode":"external","agent_metadata":a.get("agent_metadata",{"name":"external agent","model":"unspecified"})}
         with self.store.control() as c: put(c,"runs",run)
-        return {"id":run["id"],"world":world,"assignment":run["assignment"],"conversation_id":conversation["id"],
+        return {"id":run["id"],"world":world,"assignment":run["assignment"],"conversation_id":conversation_id,
                 "agent_token":grant["token"],"status":"running"}
 
     @operation("run.list","List runs",ADMIN,control=True)
     def run_list(self,a,p):
         with self.store.control() as c:
             return [{k:r[k] for k in ("id","world","status","created_at","execution_mode","agent_metadata")} |
-                    {"name":r["scenario"]["name"]} for r in rows(c,"runs")]
+                    {"name":r["scenario"]["name"],"scenario_id":r["scenario"]["id"]} for r in rows(c,"runs")]
 
     @operation("run.inspect","Observe run",ADMIN,control=True)
     def run_inspect(self,a,p):
@@ -128,6 +135,7 @@ class LabService(Service):
         with self.store.control() as c:
             r=get(c,"runs",a["id"])
             if r["status"]!="running": raise LabError("Run is closed",409)
+            if not r["conversation_id"]: raise LabError("This form-only scenario has no caller conversation",409)
             person=r["scenario"]["persona"]
             speech=[
                 f"My name is {person['name']}. My preferred callback number is {person['phone']}.",
@@ -164,6 +172,9 @@ class LabService(Service):
         checks=[]
         def check(id,label,passed,dimension,evidence):
             checks.append({"id":id,"label":label,"verdict":"passed" if passed else "failed","dimension":dimension,"evidence":evidence})
+        if options.get("intake_only"):
+            self._intake_checks(initial,final,check)
+            return self._save_grade(run,checks)
         contact=next((x for x in final["contacts"] if x["id"]==run["target_contact"] or (options.get("new_person") and x.get("phone")==person["phone"])),{})
         oldmatter=next((x for x in final["matters"] if x["id"]==run["target_matter"]),{})
         newmatters=[x for x in final["matters"] if x["id"] not in {y["id"] for y in initial["matters"]}]
@@ -210,7 +221,34 @@ class LabService(Service):
         if options.get("reply"):
             replies=[x for x in final["messages"] if x["direction"]=="inbound"]
             check("reply","Delayed reply observed in world",bool(replies),"business outcome",["messages:"+x["id"] for x in replies])
-        result={"id":uid(),"run_id":run["id"],"created_at":now(),"grader_version":"1.0",
+        return self._save_grade(run,checks)
+
+    @staticmethod
+    def _intake_checks(initial,final,check):
+        source=initial["leads"][0]
+        lead=next((r for r in final["leads"] if r["id"]==source["id"]),{})
+        old={table:{r["id"] for r in initial[table]} for table in TABLES}
+        fresh=lambda table:[r for r in final[table] if r["id"] not in old[table]]
+        contacts,matters=fresh("contacts"),fresh("matters")
+        contact=contacts[0] if len(contacts)==1 else {}
+        case=matters[0] if len(matters)==1 else {}
+        events=final["events"][len(initial["events"]):]
+        conversions=[e for e in events if e["entity"]=="leads" and e["record_id"]==source["id"]
+                     and (e["before"] or {}).get("status")=="new" and (e["after"] or {}).get("status")=="converted"]
+        check("convert","Inquiry converted once to the new case",bool(case) and lead.get("status")=="converted" and lead.get("matter_id")==case["id"] and len(conversions)==1 and conversions[0]["actor"]=="evaluated-agent","business outcome",[e["id"] for e in conversions])
+        check("contact","One new contact with the submitted details",len(contacts)==1 and all(contact.get(k)==source.get(k) for k in ("name","phone","email","source")),"data integrity",[r["id"] for r in contacts])
+        check("case","One potential case linked to that contact",bool(case and contact) and case.get("contact_id")==contact["id"] and case.get("stage")=="New inquiry" and not case.get("owner_id"),"business outcome",[r["id"] for r in matters])
+        fields=("summary","injury","incident_date","location","consent")
+        mismatches=[k for k in fields if case.get(k)!=source.get(k)]
+        check("facts","Accident details match the original form",bool(case) and not mismatches,"data integrity",mismatches or list(fields))
+        allowed={("contacts",contact.get("id")),("matters",case.get("id")),("leads",source["id"])}
+        bad=[e["id"] for e in events if e["entity"] in TABLES and (e["entity"],e["record_id"]) not in allowed]
+        scope_ok=bool(case) and case.get("priority")=="normal" and case.get("severity")=="unknown" and case.get("shopping")=="unknown" and not case.get("custom_fields") and not contact.get("custom_fields") and not contact.get("tags")
+        check("scope","No unrelated changes, qualification, or follow-up work",not bad and scope_ok and all(lead.get(k)==source.get(k) for k in (*fields,"email","name","phone","source")),"scope",bad or ["business record history"])
+
+    def _save_grade(self,run,checks):
+        final=run["final"]
+        result={"id":uid(),"run_id":run["id"],"created_at":now(),"grader_version":"1.1" if run["scenario"]["options"].get("intake_only") else "1.0",
                 "execution_mode":run["execution_mode"],"checks":checks,
                 "status":"passed" if all(x["verdict"]=="passed" for x in checks) else "failed",
                 "passed":sum(x["verdict"]=="passed" for x in checks),"total":len(checks),
@@ -255,6 +293,11 @@ class LabService(Service):
                     if e.status!=504: raise
             raise LabError("Reference could not recover from fault",500)
         try:
+            if options.get("intake_only"):
+                lead=call("records.list",entity="leads")["items"][0]
+                write("lead.convert",id=lead["id"])
+                self.finish({"id":run["id"]},p)
+                return {**created,"result":self.grade({"id":run["id"]},p),"warning":"Scripted example, not AI-agent performance."}
             for _ in range(6): self.actor({"id":run["id"]},p)
             if options.get("new_person"):
                 lead=call("records.list",entity="leads",query=person["phone"])["items"][0]

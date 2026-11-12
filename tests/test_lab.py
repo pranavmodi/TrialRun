@@ -181,6 +181,20 @@ def test_reference_scenarios_pass(env,scenario):
     assert result["result"]["semantic_review"]["status"]=="not_evaluated"
     assert result["result"]["execution_mode"]=="reference_fixture"
 
+def test_intake_only_checks_saved_facts_and_scope(env):
+    call=env[2]
+    run=good(call("run.create",{"scenario_id":"intake-only"}))
+    assert run["conversation_id"] is None
+    headers={"Authorization":"Bearer "+run["agent_token"]}
+    def agent(op,**args): return good(call(op,{"world":run["world"],**args},headers))
+    lead=agent("records.list",entity="leads")["items"][0]
+    case=agent("lead.convert",id=lead["id"])
+    agent("records.update",entity="matters",id=case["id"],version=case["version"],data={"location":"Wrong city"})
+    agent("records.create",entity="messages",data={"matter_id":case["id"],"to":lead["email"],"body":"Unrequested email"})
+    good(call("run.finish",{"id":run["id"]}))
+    result=good(call("run.grade",{"id":run["id"]}))
+    assert {x["id"] for x in result["checks"] if x["verdict"]=="failed"}=={"facts","scope"}
+
 def test_noop_fails_freeze_and_review(env):
     created=good(env[2]("run.create",{"scenario_id":"returning-caller"}))
     assert env[2]("run.grade",{"id":created["id"]}).status_code==409

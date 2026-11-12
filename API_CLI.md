@@ -141,7 +141,11 @@ Schedule a reply:
 
 Create and observe an external-agent run:
 
-    firm-lab call run.create --json '{"scenario_id":"returning-caller","agent_metadata":{"name":"my-agent","model":"record-the-exact-model-version"}}'
+    firm-lab call run.create --json '{"scenario_id":"intake-only","agent_metadata":{"name":"my-agent","model":"record-the-exact-model-version"}}'
+
+For the form-only scenario, the scoped agent can list leads and call `lead.convert` on the new lead. No conversation or follow-up actions are needed. The controller calls `run.finish` then `run.grade` with the run ID. To test the grader without an AI agent, run:
+
+    firm-lab call run.reference --json '{"scenario_id":"intake-only"}'
     firm-lab call run.inspect --json '{"id":"RUN_ID"}'
     firm-lab call actor.respond --json '{"id":"RUN_ID","text":"My email has changed. Can you update it?"}'
     firm-lab call run.finish --json '{"id":"RUN_ID"}'

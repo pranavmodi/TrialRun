@@ -46,7 +46,7 @@ Open http://127.0.0.1:8810 on your own machine. Do not expose the service public
 - Conversations, scripted caller/staff fixtures, human role-play and uploaded audio playback.
 - Independent worlds, clone/reset, a controlled business clock, scheduled external events and one-shot faults.
 - Scenario runs with scoped agent tokens, frozen evidence, repeatable grading, expert-review annotations and JSON exports.
-- Thirteen scenario fixtures, including new inquiries, repeat callers, new incidents, missing contact details, permission limits, failures and human changes.
+- A form-only intake conversion scenario plus thirteen broader fixtures, including repeat callers, new incidents, permission limits, failures and human changes.
 - HTTP operations, a minimal MCP JSON-RPC tool endpoint, CLI parity, OpenAPI and an operation explorer.
 
 ## Manual end-to-end test
