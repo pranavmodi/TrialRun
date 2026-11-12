@@ -76,7 +76,7 @@ and other runs**.
 Every run is a numbered attempt under its scenario. Attempt 1 and Attempt 2
 start from the same scenario setup, not from the previous attempt. Open **View
 attempt → Inspect records** to see changes and saved records without leaving
-your firm. The firm selector excludes attempts, including older ones.
+your firm. The header shows Harbor & Stone as plain text when it is the only firm. A switcher appears only for multiple firms and never includes test attempts.
 
 For those other scenarios:
 

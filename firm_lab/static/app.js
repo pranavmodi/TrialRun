@@ -28,7 +28,16 @@ function notify(text,error=false){const t=$('#toast');t.textContent=text;t.class
 async function boot(){try{session=await api('/api/session')}catch{return}schemas=await api('/api/schema');operations=await api('/api/operations');$('#login').hidden=true;$('#app').hidden=false;$('#role-badge').textContent=session.role;
 const nav=$('#nav');nav.innerHTML=sections.filter(s=>session.role==='controller'||!['lab','console'].includes(s[0])).map(s=>btn(s[1],'page','data-page="'+s[0]+'"')).join('');
 await loadWorlds();await refresh()}
-async function loadWorlds(){const worlds=session.role==='controller'?await op('world.list',{scope:'firms'}):[{id:session.world,name:'Agent workspace'}];world=world||session.world||session.demo_world;if(!worlds.find(w=>w.id===world))world=session.demo_world;$('#world-select').innerHTML=worlds.map(w=>'<option value="'+w.id+'" '+(w.id===world?'selected':'')+'>'+esc(w.name)+'</option>').join('')}
+async function loadWorlds(){
+ const worlds=session.role==='controller'?await op('world.list',{scope:'firms'}):[{id:session.world,name:'Agent workspace'}];
+ const current=worlds.find(w=>w.id===(world||session.world||session.demo_world))||worlds.find(w=>w.id===session.demo_world)||worlds[0];
+ if(!current)throw Error('No firm is available');
+ world=current.id;
+ const name=w=>w.id===session.demo_world&&w.name==='Harbor & Stone — demo'?'Harbor & Stone':w.name;
+ const label=$('#world-label'),select=$('#world-select');
+ label.textContent=name(current);label.hidden=worlds.length>1;select.hidden=!label.hidden;
+ select.replaceChildren(...(select.hidden?[]:worlds.map(w=>new Option(name(w),w.id,false,w.id===world))));
+}
 async function refresh(){state=await op('world.state');$('#clock').textContent=when(state.clock)+' · simulation';render();if(page==='lab')await renderLab();if(page==='events')await renderEvents()}
 function render(){const sec=sections.find(s=>s[0]===page);$('#page-title').textContent=sec[2];$('#page-description').textContent=sec[3];$('#section-kicker').textContent=['lab','console','events'].includes(page)?'OBSERVATION & CONTROL':'FIRM OPERATIONS';$('#reset-demo').hidden=session.role!=='controller'||world!==session.demo_world||state.frozen;
 document.querySelectorAll('#nav button').forEach(b=>b.classList.toggle('active',b.dataset.page===page));$('#page-actions').innerHTML='';const root=$('#content');

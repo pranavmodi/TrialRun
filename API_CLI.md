@@ -34,7 +34,7 @@ Every operation has CLI form: firm-lab call OPERATION --json 'ARGUMENTS'.
 
 | Operation | Roles | Arguments beyond world | Behavior |
 |---|---|---|---|
-| world.list | C | scope optional | List all worlds (default); `scope: "firms"` returns only entries eligible for the firm selector, excluding all evaluation attempts. |
+| world.list | C | scope optional | List all worlds (default); `scope: "firms"` returns ordinary firms only. The UI displays a plain name for one firm and a selector for multiple firms. Evaluation attempts are excluded. |
 | world.create | C | name, seed: realistic or empty | Create isolated world |
 | world.reset | C | seed optional | Reset demo/ordinary world; run worlds are protected. Header Reset demo uses explicit seed=empty on the website demo world. |
 | world.clone | C | name optional | Copy business state to a new independently writable world |

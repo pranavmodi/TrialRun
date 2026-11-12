@@ -129,8 +129,15 @@ def test_browser_workflow(tmp_path):
             assert fresh['data']['forms'] and fresh['data']['staff']
             after=httpx.post(url+'/api/ops/world.state',headers=auth,json={'world':other}).json()
             assert before['data']==after['data']
-            expect(page.locator('#world-select option')).to_have_count(1)
-            expect(page.locator('#world-select')).to_have_value(world)
+            expect(page.locator('#world-select')).to_be_hidden()
+            expect(page.locator('#world-label')).to_have_text('Harbor & Stone')
+            assert httpx.post(url+'/api/ops/world.create',headers=auth,json={'name':'Second firm','seed':'empty'}).is_success
+            page.reload()
+            selector=page.get_by_role('combobox',name='Selected firm')
+            expect(selector).to_be_visible()
+            expect(selector.locator('option')).to_have_text(['Harbor & Stone','Second firm'])
+            selector.select_option(label='Second firm')
+            expect(page.get_by_role('button',name='Reset demo')).to_be_hidden()
             assert not errors,errors
             browser.close()
         # CLI operates over HTTP, not the database.
