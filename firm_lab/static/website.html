@@ -1,6 +1,46 @@
-<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Harbor & Stone · Case review simulation</title><link rel="stylesheet" href="/static/style.css"></head><body>
-<div class="test-strip">FICTIONAL FIRM · TEST ENVIRONMENT · No legal services or real messages</div>
-<header class="public-nav"><div class="public-brand">Harbor & Stone<small>PERSONAL INJURY LAW</small></div><a href="/workspace">Return to firm workspace ↗</a></header>
-<main class="public-hero"><section><p class="eyebrow">A CLEARER PATH FORWARD</p><h1>You don't have to<br>figure this out alone.</h1><p>After an accident, even knowing what to do next can feel overwhelming. Tell us what happened, in your own words.</p><ul><li>Share the details you know today.</li><li>Tell us how and when to reach you.</li><li>Let the intake team review your inquiry.</li></ul><div class="callout">This website is a working simulation. Submissions appear in the lab's leads inbox; no actual lawyer will contact you.</div></section>
-<form id="intake-form" class="card"><p class="eyebrow">START YOUR CASE REVIEW</p><h2>Tell us what happened.</h2><label>Full name<input name="name" required placeholder="Your name"></label><div class="form-grid"><label>Callback number<input name="phone" required type="tel" placeholder="+1 415 555 0100"></label><label>Email<input name="email" type="email" placeholder="you@example.test"></label></div><div id="public-fields"></div><label class="check"><input name="consent" type="checkbox">Allow simulated email/SMS follow-up for this inquiry.</label><p class="hint">Submitting an inquiry does not create an attorney-client relationship. Use fictional information for testing.</p><button class="primary" type="submit">Submit test inquiry →</button><p id="result" role="status"></p><button id="load-sample" type="button" class="quiet">Load a fictional test example</button></form></main>
-<footer class="public-foot">Harbor & Stone is a fictional firm operated inside PI Firm Lab. This is not legal advice.</footer><script src="/static/website.js"></script></body></html>
+<!doctype html>
+<html lang="en"><head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Harbor &amp; Stone Injury Law · Case review simulation</title>
+  <link rel="stylesheet" href="/static/website.css"><script src="/static/website.js" defer></script>
+</head><body>
+<a class="skip-link" href="#main">Skip to content</a>
+<header class="site-header">
+  <div class="utility-bar"><div class="shell utility-inner"><strong>TrialRun · Fictional law firm</strong><a href="/workspace">Practice workspace ↗</a></div></div>
+  <div class="shell nav-row"><a class="brand" href="#main" aria-label="Harbor and Stone home"><span class="brand-mark" aria-hidden="true"><b>H</b><i>&amp;</i><b>S</b></span><span><strong>Harbor &amp; Stone</strong><small>Injury Law</small></span></a>
+    <nav class="nav-actions" aria-label="Primary navigation"><a class="jump" href="#about">Our approach</a><a class="button button-primary" href="#contact">Start a case review</a></nav></div>
+</header>
+<main id="main">
+  <section class="hero" aria-labelledby="hero-title">
+    <img class="hero-photo" src="/static/hero-attorney.webp" alt=""><div class="hero-shade"></div>
+    <div class="shell hero-content"><div class="eyebrow">Personal injury · Online intake</div>
+      <h1 id="hero-title">Injured in an accident? You don’t have to face it alone.</h1>
+      <p>You may have more questions than answers. Start with what you remember. There’s no need to have a police report or medical records in hand.</p>
+      <div class="hero-actions"><a class="button button-primary" href="#contact">Tell us what happened →</a></div>
+      <p class="hero-note">This is a practice website. Use fictional details only.</p></div>
+    <img class="hero-photo-mobile" src="/static/hero-attorney.webp" alt="">
+  </section>
+  <section class="trust-strip" aria-label="What to expect"><div class="shell trust-grid">
+    <div><span>01</span><strong>In your own words</strong><small>No legal terms needed</small></div>
+    <div><span>02</span><strong>At your pace</strong><small>Share what you know today</small></div>
+    <div><span>03</span><strong>Online anytime</strong><small>Start with a written inquiry</small></div>
+  </div></section>
+  <section id="about" class="section"><div class="shell split-grid">
+    <div class="section-copy"><div class="eyebrow eyebrow-dark">Our approach</div><h2>First, tell your story.</h2>
+      <p>Maybe a driver hit you on the way home. Maybe you fell and you’re still piecing together what happened. A short description of where you were, what happened, and how you’re feeling is a place to start.</p>
+      <a class="jump" href="#contact">Go to the case review form →</a></div>
+    <figure><img src="/static/client-consultation.webp" loading="lazy" alt="A consultation at the fictional firm"></figure></div>
+  </section>
+  <section id="contact" class="contact-section" aria-labelledby="contact-title"><div class="shell contact-grid">
+    <div class="contact-copy"><div class="eyebrow">Start your case review</div><h2 id="contact-title">Tell us what happened.</h2>
+      <p>Share the accident details you know and how you would like to be reached.</p>
+      <p class="legal-note">This form goes to the simulated firm’s practice inbox. No real lawyer will contact you, and submitting it does not create an attorney-client relationship.</p></div>
+    <form id="intake-form" class="intake-form"><div class="form-heading"><span>Written inquiry</span><h3>Your case review</h3><button id="load-sample" type="button" class="sample">Load a fictional test example</button></div>
+      <div class="form-grid"><label class="full">Full name<input name="name" required placeholder="Your name"></label><label>Callback number<input name="phone" required type="tel" placeholder="+1 415 555 0100"></label><label>Email<input name="email" type="email" placeholder="you@example.test"></label></div>
+      <div id="public-fields" class="form-grid"></div>
+      <label class="consent"><input name="consent" type="checkbox">Allow simulated email or text follow-up about this inquiry.</label>
+      <button class="button button-primary button-wide" type="submit">Submit test inquiry →</button><p id="result" role="status" aria-live="polite"></p>
+    </form></div>
+  </section>
+</main><footer class="footer"><div class="shell"><strong>Harbor &amp; Stone Injury Law</strong><small>A fictional firm inside TrialRun. No legal services or real messages.</small></div></footer>
+</body></html>

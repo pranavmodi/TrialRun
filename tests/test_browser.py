@@ -30,6 +30,10 @@ def test_browser_workflow(tmp_path):
             page=browser.new_context(viewport={"width":1440,"height":1000}).new_page()
             errors=[]; page.on("pageerror",lambda e:errors.append(str(e)))
             page.goto(url+"/website")
+            page.get_by_role("link",name="Tell us what happened").click()
+            expect(page).to_have_url(url+"/website#contact")
+            expect(page.locator(".hero-photo")).to_be_visible()
+            assert page.locator(".hero-photo").evaluate("img => img.complete && img.naturalWidth > 0")
             page.get_by_role("button",name="Load a fictional test example").click()
             page.get_by_role("button",name="Submit test inquiry").click()
             expect(page.locator("#result")).to_contain_text("Reference:")
@@ -136,6 +140,8 @@ def test_browser_workflow(tmp_path):
             page.screenshot(path=str(screenshot_dir/"workspace-mobile.png"),full_page=True)
             page.goto(url+"/website")
             page.screenshot(path=str(screenshot_dir/"website-mobile.png"),full_page=True)
+            expect(page.locator(".hero-photo-mobile")).to_be_visible()
+            assert page.evaluate("document.documentElement.scrollWidth <= innerWidth")
             # Uploaded audio is a playable artifact, not a claim of live capture.
             import base64, io, wave
             audio=io.BytesIO()

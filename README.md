@@ -41,7 +41,7 @@ Open http://127.0.0.1:8810 on your own machine. Do not expose the service public
 - Local simulated email/SMS mailboxes: drafts, consent checks, delivery failure, retry and incoming messages.
 - Staff availability and conflict-checked consultation booking.
 - Case-linked text documents with version history.
-- Configurable intake form and a working fictional-firm website.
+- Configurable intake form and a fictional-firm website styled after Harbor & Stone’s PI Web demo. Photography and styles are served locally; the form uses TrialRun only.
 - Workflow templates with task/form waits, draft or automatic local acknowledgments, and stage transitions.
 - Conversations, scripted caller/staff fixtures, human role-play and uploaded audio playback.
 - Independent worlds, clone/reset, a controlled business clock, scheduled external events and one-shot faults.
