@@ -27,6 +27,20 @@ def good(response):
     assert response.status_code==200,response.text
     return response.json()
 
+def test_openclaw_provider_snapshot_and_failure_boundary(env,monkeypatch):
+    app,_,call,_=env
+    monkeypatch.setenv("TRIALRUN_OPENCLAW_SOCKET","/tmp/test-only.sock")
+    app.state.lab.install_scenarios()
+    result=good(call("agent.list"))
+    assert next(p for p in result["providers"] if p["id"]=="openclaw")["configured"]
+    profile=next(p for p in result["profiles"] if p["id"]=="openclaw-clerk")
+    assert call("agent.save",{**profile,"provider":"local"}).status_code==400
+    args={"scenario_id":"intake-only","watch_mode":"ai","profile_id":profile["id"]}
+    run=good(call("run.create",args))
+    assert good(call("run.inspect",{"id":run["id"]}))["agent_metadata"]["provider"]=="openclaw" and "agent_token" not in run
+    monkeypatch.delenv("TRIALRUN_OPENCLAW_SOCKET")
+    assert call("run.create",args).status_code==503
+
 def test_managed_model_lifecycle_and_isolation(env,monkeypatch):
     import threading
     from firm_lab import runner

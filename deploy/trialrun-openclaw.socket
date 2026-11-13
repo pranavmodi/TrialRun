@@ -1,0 +1,8 @@
+[Unit]
+Description=TrialRun restricted inference socket
+[Socket]
+ListenStream=/run/trialrun-clerk.sock
+SocketMode=0660
+SocketGroup=trialrun
+[Install]
+WantedBy=sockets.target

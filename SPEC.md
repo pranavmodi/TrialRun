@@ -69,3 +69,10 @@ solutions, evaluator state or credentials. Calls and results are recorded per tu
 and successful changes can be correlated with the invocation. The grader is unchanged.
 Closing the browser does not stop work. Interrupted attempts are inspectable and
 gradable but are not replayed. Worker exit and evaluation outcome are separate.
+
+The controller can choose local inference or OpenClaw using a versioned profile. Attempts
+snapshot the provider and model target. The gateway clerk can return a proposed action
+but cannot execute native tools: the TrialRun worker alone validates and executes it
+under the intake grant. Provider failure is visible and must not switch providers.
+The sign-in, library, run observer, firm workspaces, reference, and fictional website
+offer plain-language section help usable by pointer, keyboard, or touch.

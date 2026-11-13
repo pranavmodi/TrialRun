@@ -28,6 +28,8 @@ def test_real_model_from_lab(tmp_path):
             page.goto(url+"/lab")
             page.get_by_label("Lab access token").fill((tmp_path/"controller.token").read_text().strip())
             page.get_by_role("button",name="Open lab").click()
+            if os.getenv("TRIALRUN_TEST_PROVIDER")=="openclaw":
+                page.locator("#ai-profile").select_option("openclaw-clerk")
             page.get_by_role("button",name="Edit profile").click()
             page.get_by_label("Name",exact=True).fill("Live acceptance clerk")
             page.get_by_role("button",name="Save profile").click()
@@ -45,6 +47,9 @@ def test_real_model_from_lab(tmp_path):
             evidence=page.evaluate("""async ()=> (await fetch('/api/ops/run.inspect',{method:'POST',
               headers:{'Content-Type':'application/json'},body:JSON.stringify({id:location.pathname.split('/').pop()})})).json()""")
             score=evidence["results"][-1]
+            assert evidence["agent_metadata"]["provider"]==os.getenv("TRIALRUN_TEST_PROVIDER","local")
+            if os.getenv("TRIALRUN_TEST_PROVIDER")=="openclaw":
+                assert evidence["stop_reason"]=="Model returned a final response",evidence["stop_reason"]
             print("Real model:",evidence["agent_metadata"]["model"],"stop:",evidence["stop_reason"],
                   "tools:",[e["tool"] for e in evidence["runner_trace"] if e["event"]=="Requested tool"],
                   "score:",score["passed"],"/",score["total"])

@@ -1,6 +1,8 @@
 include *.md
 include Dockerfile
 include uv.lock
+recursive-include deploy *
+recursive-exclude deploy __pycache__ *.pyc
 recursive-include examples *.py
 recursive-include tests *.py
 recursive-include firm_lab/static *

@@ -85,6 +85,9 @@ class LabService(Service):
             if runner.models() and not get(c,"profiles","intake-clerk",False):
                 put(c,"profiles",{"id":"intake-clerk","name":"Intake Clerk","version":1,"model":runner.models()[0],
                     "instructions":runner.DEFAULT_INSTRUCTIONS,"max_turns":8,"timeout_seconds":180})
+            if runner.models("openclaw") and not get(c,"profiles","openclaw-clerk",False):
+                put(c,"profiles",{"id":"openclaw-clerk","name":"Gateway Clerk","provider":"openclaw","version":1,
+                    "model":runner.models("openclaw")[0],"instructions":runner.DEFAULT_INSTRUCTIONS,"max_turns":8,"timeout_seconds":180})
             for scenario in scenarios():
                 if not get(c,"scenarios",scenario["id"],False): put(c,"scenarios",scenario)
 
@@ -111,11 +114,14 @@ class LabService(Service):
     @operation("agent.list","Show saved model agent profiles and configured models",ADMIN,control=True)
     def agents(self,a,p):
         with self.store.control() as c:
-            return {"profiles":rows(c,"profiles"),"models":runner.models(),"configured":bool(os.getenv("TRIALRUN_MODEL_URL") and runner.models())}
+            sources=runner.providers()
+            return {"profiles":[{"provider":"local",**v} for v in rows(c,"profiles")],"models":runner.models(),
+                    "configured":any(v["configured"] for v in sources),"providers":sources}
 
     @operation("agent.save","Create or revise a model agent profile",ADMIN,True,True)
     def save_agent(self,a,p):
-        if a.get("model") not in runner.models(): raise LabError("Select a configured model")
+        provider=a.get("provider","local")
+        if a.get("model") not in runner.models(provider): raise LabError("Select a configured model for this provider")
         fields={}
         for key,limit in (("name",80),("instructions",4000)):
             value=a.get(key)
@@ -128,7 +134,7 @@ class LabService(Service):
         with self.store.control() as c:
             old=get(c,"profiles",a["id"]) if a.get("id") else {}
             if old and old["version"]!=a.get("version"): raise LabError("Profile changed; reopen it",409)
-            return put(c,"profiles",dict(fields,id=old.get("id",uid()),version=old.get("version",0)+1,model=a["model"]))
+            return put(c,"profiles",dict(fields,id=old.get("id",uid()),version=old.get("version",0)+1,model=a["model"],provider=provider))
 
     @operation("run.create","Create isolated scenario run",ADMIN,True,True)
     def run_create(self,a,p):
@@ -138,7 +144,8 @@ class LabService(Service):
             raise LabError("Choose external, scripted or AI watch mode for the intake scenario")
         if watch=="ai":
             with self.store.control() as c: profile=get(c,"profiles",a["profile_id"])
-            if profile["model"] not in runner.models() or not os.getenv("TRIALRUN_MODEL_URL"):
+            profile.setdefault("provider","local")
+            if not any(x["id"]==profile["provider"] and x["configured"] and profile["model"] in x["models"] for x in runner.providers()):
                 raise LabError("The model provider is not configured",503)
         world=self._create_world({"name":scenario["name"],"seed":"realistic"},kind="attempt")["id"]
         grant=self.grant_create({"world":world,"role":"intake","actor":"evaluated-agent"},p) if watch not in ("ai","scripted") else None

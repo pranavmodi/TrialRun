@@ -1,0 +1,13 @@
+[Unit]
+Description=TrialRun fixed-target OpenClaw decision adapter
+[Service]
+DynamicUser=yes
+WorkingDirectory=/opt/trialrun-openclaw
+ExecStart=/opt/trialrun-venv/bin/python -m uvicorn openclaw_bridge:app --fd 3 --no-access-log
+LoadCredentialEncrypted=gateway:/etc/credstore.encrypted/trialrun-gateway
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+IPAddressDeny=any
+IPAddressAllow=localhost

@@ -35,7 +35,7 @@ Every operation has CLI form: firm-lab call OPERATION --json 'ARGUMENTS'.
 | Operation | Roles | Arguments beyond world | Behavior |
 |---|---|---|---|
 | agent.list | C | none | Profiles, deployment model choices and configuration state |
-| agent.save | C | name, model, instructions, max_turns (1–20), timeout_seconds (10–300); id and version to edit | Create or revise a profile; old attempts retain their original settings |
+| agent.save | C | name, provider (local by default, or openclaw), model, instructions, max_turns (1–20), timeout_seconds (10–300); id and version to edit | Create or revise a profile using a model listed for its provider; old attempts retain their original settings |
 | world.list | C | scope optional | List all worlds (default); `scope: "firms"` returns ordinary firms only. The UI displays a plain name for one firm and a selector for multiple firms. Evaluation attempts are excluded. |
 | world.create | C | name, seed: realistic or empty | Create isolated world |
 | world.reset | C | seed optional | Reset demo/ordinary world; run worlds are protected. Header Reset demo uses explicit seed=empty on the website demo world. |
@@ -199,6 +199,11 @@ Model-run CLI (equivalent to the lab UI):
     firm-lab call run.grade --json '{"id":"RUN_ID"}'
 
 Inspect returns ai_state, runner_trace, stop_reason, profile snapshot and workspace changes.
+For OpenClaw, use `"profile_id":"openclaw-clerk"` in run.create. In agent.list,
+`providers` lists provider IDs, display labels, allowed model targets and configuration flags.
+Configured means installed, not a live health probe. The legacy `models` field lists local models.
+To create a profile via CLI or HTTP, pass for example
+`{"name":"Gateway reviewer","provider":"openclaw","model":"openclaw/trialrun-clerk","instructions":"Work from the intake records and verify your changes."}`.
 Wait until the worker is stopped, failed or interrupted before freezing; export with run.export.
 
 

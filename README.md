@@ -194,3 +194,35 @@ Issue a certificate for the DNS name before enabling the TLS server block;
 install the executable certificate reload hook in
 `/etc/letsencrypt/renewal-hooks/deploy/`. Never run two processes against the
 same data directory or interrupt an active evaluation for deployment.
+
+### Choose local inference or OpenClaw
+
+In **Evaluation Lab → Model-backed agent**, choose **Intake Clerk · Local model**
+or **Gateway Clerk · OpenClaw gateway**. Click **Run with AI**, then **Submit
+Jamie’s website form**. Watch **Model turns** and **Workspace state**; finish
+and evaluate once the clerk stops. Edit a profile to change its provider,
+instructions or budget. Earlier runs keep their settings. Local-only installs
+do not need OpenClaw. See [API and CLI](API_CLI.md) for the equivalent operations.
+
+The gateway receives fictional record contents and may use a hosted model; use
+the local clerk when records must stay on the host. Neither receives lab tokens.
+The app connects to a group-restricted Unix socket, not the operator gateway.
+The adapter accepts decisions only for `openclaw/trialrun-clerk`, never caller
+URLs, credentials, native tools, session keys or agent/model override headers.
+The worker validates proposed actions and performs them through attempt-scoped MCP.
+
+**Operator setup (optional):** enable chat completions on the loopback OpenClaw
+gateway (port 18789). Add a dedicated agent named `trialrun-clerk` with a fresh
+workspace, no skills, heartbeat or memory search, elevated tools disabled, and
+an explicit tool allowlist containing only `trialrun_decide` (the adapter's
+client-supplied decision function). Explicitly select the OpenClaw runtime
+for its model; do not use the default host agent or a runtime with native shell
+access. Keep gateway configuration and provider credentials outside this repo.
+Install `deploy/openclaw_bridge.py` root-owned in `/opt/trialrun-openclaw/`
+and both `deploy/trialrun-openclaw.*` units in `/etc/systemd/system/`.
+Provision the gateway bearer through a secure stdin pipe to
+`systemd-creds encrypt --name=gateway - /etc/credstore.encrypted/trialrun-gateway`.
+Reload systemd, enable and start `trialrun-openclaw.socket`, set
+`TRIALRUN_OPENCLAW_SOCKET=/run/trialrun-clerk.sock` in the private runner environment,
+and restart the lab when idle. On credential rotation, refresh the encrypted
+credential and restart the bridge. No extra public hostname or port is needed.
