@@ -133,6 +133,16 @@ def test_browser_workflow(tmp_path):
             expect(page.locator("#page-title")).to_contain_text("Attempt 2")
             page.get_by_role("link",name="Back to evaluation lab").click()
             expect(page.get_by_role("row").filter(has_text="Attempt 2")).to_contain_text("failed")
+            rows=page.locator('#attempts tbody tr')
+            for row in rows.all():
+                detail=row.get_by_role('link',name='View attempt',exact=True)
+                direct=row.get_by_role('link',name='View workspace',exact=True)
+                expect(direct).to_have_attribute('href',detail.get_attribute('href')+'/workspace')
+            with page.expect_popup() as opened:
+                rows.filter(has_text='Attempt 2').get_by_role('link',name='View workspace').click()
+            expect(opened.value.locator('#attempt')).to_have_text('Attempt 2 · Read-only')
+            expect(page).to_have_url(url+'/lab')
+            opened.value.close()
             expect(page.get_by_role("row").filter(has_text="Attempt 1").filter(has_text="Convert one website inquiry")).to_contain_text("passed")
             page.get_by_text("More scenarios and other runs",exact=True).click()
             page.locator('[data-action="reference"][data-id="ambiguous-save"]').click()

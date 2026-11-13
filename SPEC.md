@@ -55,7 +55,7 @@ Pass requires all required programmatic criteria, not a favorable mean. Return p
 7. Document exact results and limitations in VALIDATION.md before marking goal complete.
 ### Attempt workspace observer
 
-The attempt inspector links to a separate read-only firm view bound to the
+Each lab attempt row and the attempt inspector link to a separate read-only firm view bound to the
 attempt ID, not the operator's practice firm. The controller can inspect records
 and follow their relationships while the attempt runs or after it is frozen.
 Viewing records must not change the world, action log, or grade.

@@ -4,7 +4,8 @@ const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&
 const pretty=x=>'<pre>'+esc(JSON.stringify(x,null,2))+'</pre>';
 const button=(name,action,id='',primary=false)=>'<button data-action="'+action+'" data-id="'+esc(id)+'" class="'+(primary?'primary':'')+'">'+esc(name)+'</button>';
 const path=id=>'/lab/attempts/'+encodeURIComponent(id);
-const link=id=>'<a href="'+path(id)+'">View attempt</a>';
+const workspaceLink=(id,label)=>'<a href="'+path(id)+'/workspace" target="_blank" rel="noopener">'+label+'</a>';
+const attemptLinks=id=>'<div class="attempt-links"><a href="'+path(id)+'">View attempt</a>'+workspaceLink(id,'View workspace')+'</div>';
 let generation=0,timer,scenarios,last='',current=null;
 async function api(url,data){
   const res=await fetch(url,data===undefined?{}:{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});
@@ -22,7 +23,7 @@ function library(){
     '<details class="card"><summary>Run scenarios in parallel</summary><p>Select scenarios to run as independent background scripts. This checks the fixtures, not AI performance.</p><div class="parallel-options">'+scenarios.map(s=>'<label><input type="checkbox" name="batch" value="'+esc(s.id)+'">'+esc(s.name)+'</label>').join('')+'</div>'+button('Launch selected scenarios','batch')+'</details><h2>Attempts</h2><div id="attempts"></div>';
 }
 function listing(runs){
-  $('#attempts').innerHTML=runs.length?'<div class="table-wrap"><table><thead><tr><th>Scenario</th><th>Attempt</th><th>Who works</th><th>Status</th><th></th></tr></thead><tbody>'+runs.slice().reverse().map(r=>'<tr><td>'+esc(r.name)+'</td><td>Attempt '+r.attempt_number+'</td><td>'+(r.execution_mode==='reference_fixture'?'Script':'External agent')+'</td><td>'+esc(status(r))+'</td><td>'+link(r.id)+'</td></tr>').join('')+'</tbody></table></div>':'<p>No attempts yet.</p>';
+  $('#attempts').innerHTML=runs.length?'<div class="table-wrap"><table><thead><tr><th>Scenario</th><th>Attempt</th><th>Who works</th><th>Status</th><th>Actions</th></tr></thead><tbody>'+runs.slice().reverse().map(r=>'<tr><td>'+esc(r.name)+'</td><td>Attempt '+r.attempt_number+'</td><td>'+(r.execution_mode==='reference_fixture'?'Script':'External agent')+'</td><td>'+esc(status(r))+'</td><td>'+attemptLinks(r.id)+'</td></tr>').join('')+'</tbody></table></div>':'<p>No attempts yet.</p>';
 }
 function workspace(r){
   const s=r.state,lead=r.submission?s.leads.find(l=>l.id===r.submission.id):s.leads[0];

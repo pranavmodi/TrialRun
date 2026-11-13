@@ -63,7 +63,8 @@ Open http://127.0.0.1:8810 on your own machine. Do not expose the service public
 
 The public website always submits to the dedicated demo world. It does not silently switch to whatever run an operator is viewing.
 
-On any attempt page, **View attempt workspace** opens the firm's read-only
+In the lab’s **Attempts** table, click **View workspace** beside **View attempt**.
+This shortcut, like **View attempt workspace** on the attempt page, opens the firm's read-only
 inbox, pipeline, contacts and other records in a new tab. Follow an inquiry to
 its case or contact. Open attempts update live; finished attempts use the saved
 final snapshot. The practice firm and other attempts remain separate.

@@ -187,6 +187,6 @@ a local demo command. The gateway does not change operation permissions.
 ### Read-only attempt workspace
 
 `/lab/attempts/<run-id>/workspace` displays the controller-only `run.inspect`
-projection. The same live or frozen records are available from
+projection. Each lab attempt row links directly to this route. The same live or frozen records are available from
 `POST /api/ops/run.inspect` or `firm-lab call run.inspect --json '{"id":"<run-id>"}'`
 under `state`. Navigation in the view does not call business operations.
