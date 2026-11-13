@@ -46,7 +46,7 @@ function detail(r){
   const script=r.execution_mode==='reference_fixture',open=r.status==='running'&&!r.job_state,res=r.results.at(-1);
   $('#section-kicker').textContent=script?'SCRIPTED EXAMPLE · NOT AN AI EVALUATION':'EXTERNAL AGENT TEST';
   $('#page-title').textContent=r.scenario.name+' · Attempt '+r.attempt_number;$('#description').textContent=r.assignment;
-  const ctl=[];
+  const ctl=['<a class="badge" href="'+path(r.id)+'/workspace" target="_blank" rel="noopener">View attempt workspace ↗</a>'];
   if(open&&r.watch_mode&&!r.submission)ctl.push(button('Submit Jamie’s website form','submit',r.id,true));
   if(open&&r.watch_mode==='scripted'&&r.submission&&r.state.leads.find(x=>x.id===r.submission.id)?.status==='new')ctl.push(button('Run scripted conversion','script',r.id,true));
   if(open&&r.conversation_id)ctl.push(button('Caller speaks','actor',r.id),button('Human role-play','roleplay',r.id));

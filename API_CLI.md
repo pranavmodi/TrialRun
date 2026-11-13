@@ -184,3 +184,9 @@ Authenticated API and MCP clients use their existing role-scoped bearer
 tokens. The hosting gateway also requires a session or bearer token for the
 simulated website and public-intake endpoint; anonymous CLI `submit` remains
 a local demo command. The gateway does not change operation permissions.
+### Read-only attempt workspace
+
+`/lab/attempts/<run-id>/workspace` displays the controller-only `run.inspect`
+projection. The same live or frozen records are available from
+`POST /api/ops/run.inspect` or `firm-lab call run.inspect --json '{"id":"<run-id>"}'`
+under `state`. Navigation in the view does not call business operations.

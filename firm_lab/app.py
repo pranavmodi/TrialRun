@@ -138,6 +138,8 @@ def create_app(data_root=None):
     def lab_home(): return FileResponse(STATIC/"lab.html")
     @app.get("/lab/attempts/{attempt_id}")
     def lab_attempt(attempt_id:str): return FileResponse(STATIC/"lab.html")
+    @app.get("/lab/attempts/{attempt_id}/workspace")
+    def attempt_workspace(attempt_id:str): return FileResponse(STATIC/"attempt-workspace.html")
     @app.get("/workspace")
     def workspace(): return FileResponse(STATIC/"index.html")
     @app.get("/website")

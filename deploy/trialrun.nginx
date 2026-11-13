@@ -22,7 +22,7 @@ server {
 
     # Only the sign-in shell and static assets are public. The app still
     # authorizes every role-scoped operation after the gateway session check.
-    location ~ ^/(?:$|lab/?$|lab/attempts/[a-f0-9]+$|workspace/?$|static/) {
+    location ~ ^/(?:$|lab/?$|lab/attempts/[a-f0-9]+(?:/workspace)?$|workspace/?$|static/) {
         proxy_pass http://127.0.0.1:8810;
     }
     location = /api/login {

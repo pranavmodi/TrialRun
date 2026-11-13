@@ -53,3 +53,9 @@ Pass requires all required programmatic criteria, not a favorable mean. Return p
 5. CLI smoke tests against a real local server, OpenAPI and registry parity.
 6. Restart server and verify data; reset one world and confirm other worlds/results unchanged.
 7. Document exact results and limitations in VALIDATION.md before marking goal complete.
+### Attempt workspace observer
+
+The attempt inspector links to a separate read-only firm view bound to the
+attempt ID, not the operator's practice firm. The controller can inspect records
+and follow their relationships while the attempt runs or after it is frozen.
+Viewing records must not change the world, action log, or grade.
