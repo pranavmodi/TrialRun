@@ -1,0 +1,19 @@
+[Unit]
+Description=TrialRun evaluation lab
+After=network.target
+
+[Service]
+User=trialrun
+Group=trialrun
+WorkingDirectory=/home/pranav/pi-firm-agent-lab
+ExecStart=/opt/trialrun-venv/bin/firm-lab serve --host 127.0.0.1 --port 8810 --data /home/pranav/pi-firm-agent-lab/.local
+Restart=always
+RestartSec=3
+UMask=0077
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ReadWritePaths=/home/pranav/pi-firm-agent-lab/.local
+
+[Install]
+WantedBy=multi-user.target

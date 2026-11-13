@@ -1,0 +1,45 @@
+limit_req_zone $binary_remote_addr zone=trialrun_login:1m rate=10r/m;
+
+server {
+    listen 80;
+    server_name trialrun.getpossibleminds.com;
+    return 301 https://trialrun.getpossibleminds.com$request_uri;
+}
+
+server {
+    listen 443 ssl;
+    server_name trialrun.getpossibleminds.com;
+    ssl_certificate /etc/letsencrypt/live/trialrun.getpossibleminds.com/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/trialrun.getpossibleminds.com/privkey.pem;
+    include /etc/letsencrypt/options-ssl-nginx.conf;
+    ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem;
+    add_header Strict-Transport-Security "max-age=31536000" always;
+    client_max_body_size 8m;
+    proxy_set_header Host $host;
+    proxy_set_header X-Forwarded-Proto https;
+    proxy_set_header X-Forwarded-For $remote_addr;
+    proxy_cookie_flags firm_lab_token secure httponly samesite=strict;
+
+    # Only the sign-in shell and static assets are public. The app still
+    # authorizes every role-scoped operation after the gateway session check.
+    location ~ ^/(?:$|lab/?$|lab/attempts/[a-f0-9]+$|workspace/?$|static/) {
+        proxy_pass http://127.0.0.1:8810;
+    }
+    location = /api/login {
+        limit_req zone=trialrun_login burst=5 nodelay;
+        limit_req_status 429;
+        proxy_pass http://127.0.0.1:8810;
+    }
+    location = /_trialrun_session {
+        internal;
+        proxy_method GET;
+        proxy_pass_request_body off;
+        proxy_set_header Content-Length "";
+        proxy_pass http://127.0.0.1:8810/api/session;
+    }
+    location / {
+        auth_request /_trialrun_session;
+        proxy_read_timeout 180s;
+        proxy_pass http://127.0.0.1:8810;
+    }
+}

@@ -177,3 +177,10 @@ The CLI equivalent is firm-lab submit. Idempotency-Key is supported.
 ## Browser and transport support
 
 The browser uses the registry plus GET /api/schema. Login/logout are session transport helpers rather than business operations; the CLI uses bearer tokens instead. Source-of-truth operation definitions are in firm_lab/service.py and firm_lab/lab.py. Tests assert that this catalog contains every registered operation.
+### Hosted endpoint
+
+Use `--url https://trialrun.getpossibleminds.com` for remote CLI access.
+Authenticated API and MCP clients use their existing role-scoped bearer
+tokens. The hosting gateway also requires a session or bearer token for the
+simulated website and public-intake endpoint; anonymous CLI `submit` remains
+a local demo command. The gateway does not change operation permissions.

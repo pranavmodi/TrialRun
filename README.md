@@ -136,3 +136,25 @@ See SPEC.md for acceptance criteria and VALIDATION.md for verified results. ARCH
 - [Mercor Archipelago environment separation](https://github.com/Mercor-Intelligence/archipelago)
 
 These are design references, not dependencies or claims of equivalent behavior.
+## Hosted access
+
+Open [TrialRun Evaluation Lab](https://trialrun.getpossibleminds.com/lab) or the
+[manual workspace](https://trialrun.getpossibleminds.com/workspace). No SSH
+tunnel is needed. The controller signs in with the private server-side token
+and should keep it in a password manager. Do not give it to evaluated agents.
+
+The service and Nginx configurations are in `deploy/`. The server runs one
+loopback application process as the dedicated `trialrun` user. systemd starts
+it on boot; Nginx terminates TLS and gates the simulated website, APIs and MCP
+with the existing session cookie or bearer token. Only the sign-in screens,
+static assets and login endpoint are publicly reachable without a token.
+
+To reproduce this deployment, use the existing checkout at
+`/home/pranav/pi-firm-agent-lab`, provision the service user, and run
+`UV_PROJECT_ENVIRONMENT=/opt/trialrun-venv uv sync --frozen --no-dev --python /usr/bin/python3`.
+Give only the service user access to the private `.local` data directory.
+Install the service in `/etc/systemd/system/`, reload systemd and enable it.
+Issue a certificate for the DNS name before enabling the TLS server block;
+install the executable certificate reload hook in
+`/etc/letsencrypt/renewal-hooks/deploy/`. Never run two processes against the
+same data directory or interrupt an active evaluation for deployment.
