@@ -5,6 +5,7 @@ import secrets
 import sqlite3
 import uuid
 from contextlib import contextmanager
+from contextvars import ContextVar
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -30,7 +31,7 @@ class Store:
         self.worlds = self.root / "worlds"
         self.worlds.mkdir(exist_ok=True)
         with self.control() as c:
-            for table in ("worlds", "grants", "scenarios", "runs", "results", "reviews"):
+            for table in ("worlds", "grants", "scenarios", "runs", "results", "reviews", "profiles"):
                 c.execute(f"CREATE TABLE IF NOT EXISTS {table} (id TEXT PRIMARY KEY, data TEXT NOT NULL)")
         tokenfile = self.root / "controller.token"
         if not tokenfile.exists():
@@ -101,9 +102,12 @@ def put(c, table, data):
 def meta(c):
     return get(c, "meta", "world")
 
+tool_call_id = ContextVar("tool_call_id", default=None)
+
 def audit(c, actor, action, entity, before, after, detail=None):
     event = {"id": uid(), "at": meta(c)["clock"], "wall_at": now(), "actor": actor,
              "action": action, "entity": entity, "record_id": (after or before or {}).get("id"),
              "before": before, "after": after, "detail": detail or {}}
+    if tool_call_id.get(): event["tool_call_id"]=tool_call_id.get()
     put(c, "events", event)
     return event

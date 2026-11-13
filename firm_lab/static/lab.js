@@ -6,7 +6,7 @@ const button=(name,action,id='',primary=false)=>'<button data-action="'+action+'
 const path=id=>'/lab/attempts/'+encodeURIComponent(id);
 const workspaceLink=(id,label)=>'<a href="'+path(id)+'/workspace" target="_blank" rel="noopener">'+label+'</a>';
 const attemptLinks=id=>'<div class="attempt-links"><a href="'+path(id)+'">View attempt</a>'+workspaceLink(id,'View workspace')+'</div>';
-let generation=0,timer,scenarios,last='',current=null;
+let generation=0,timer,scenarios,agents,last='',current=null;
 async function api(url,data){
   const res=await fetch(url,data===undefined?{}:{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});
   const obj=await res.json();if(!res.ok)throw Error(obj.error||'Request failed');return obj;
@@ -14,16 +14,30 @@ async function api(url,data){
 const op=(name,args={})=>api('/api/ops/'+name,args);
 function error(e){$('#toast').textContent=e.message;$('#toast').hidden=false}
 function dialog(title,html){$('#modal-title').textContent=title;$('#modal-fields').innerHTML=html;$('#modal').showModal()}
-function status(r){return r.outcome||r.results?.at(-1)?.status||({queued:'Queued',working:'Running script',failed:'Worker failed',interrupted:'Interrupted'})[r.job_state]||(r.status==='running'?'Open':'Awaiting evaluation')}
+function status(r){return r.outcome||r.results?.at(-1)?.status||({waiting:'Waiting for website inquiry',queued:'AI queued',working:'AI working',stopped:'AI stopped · ready to grade',failed:'AI failed · inspect evidence',interrupted:'AI interrupted'})[r.ai_state]||({queued:'Queued',working:'Running script',failed:'Worker failed',interrupted:'Interrupted'})[r.job_state]||(r.status==='running'?'Open':'Awaiting evaluation')}
+function agentControls(){
+  const opts=agents.profiles.map(p=>'<option value="'+esc(p.id)+'">'+esc(p.name)+' · v'+p.version+'</option>').join('');
+  return '<div class="card"><h3>Model-backed agent</h3>'+(agents.configured?
+    '<label>Agent profile<select id="ai-profile">'+opts+'</select></label><div class="actions">'+button('Run with AI','ai','intake-only',true)+button('Edit profile','edit-agent')+button('New profile','new-agent')+'</div>':
+    '<p>No inference provider configured. See the runner setup in the README.</p>')+'</div>';
+}
+function editProfile(p){
+  dialog(p?'Edit agent profile':'New agent profile','<form id="profile-form"><label>Name<input name="name" required maxlength="80" value="'+esc(p?.name)+'"></label><label>Model<select name="model">'+agents.models.map(m=>'<option '+(p?.model===m?'selected':'')+'>'+esc(m)+'</option>').join('')+'</select></label><label>Standing instructions<textarea name="instructions" required maxlength="4000">'+esc(p?.instructions||'Work from the firm records. Verify the results of your actions.')+'</textarea></label><details><summary>Limits</summary><label>Maximum model turns<input name="max_turns" type="number" min="1" max="20" value="'+(p?.max_turns||8)+'"></label><label>Time limit (seconds)<input name="timeout_seconds" type="number" min="10" max="300" value="'+(p?.timeout_seconds||180)+'"></label></details><button>Save profile</button><p role="alert"></p></form>');
+  $('#profile-form').onsubmit=async e=>{e.preventDefault();const f=e.target,b=f.querySelector('button');b.disabled=true;try{
+    const data=Object.fromEntries(new FormData(f));for(const k of ['max_turns','timeout_seconds'])data[k]=Number(data[k]);
+    const saved=await op('agent.save',{...data,...(p?{id:p.id,version:p.version}:{})});
+    agents=await op('agent.list');$('#modal').close();await route();$('#ai-profile').value=saved.id;
+  }catch(err){f.querySelector('[role=alert]').textContent=err.message}finally{b.disabled=false}};
+}
 function library(){
   $('#section-kicker').textContent='EVALUATION LAB';$('#page-title').textContent='Scenario library';
   $('#description').textContent='Start an isolated attempt, watch its records change, and compare results. Leaving the page does not stop a run.';
   const card=s=>'<article class="card"><h2>'+esc(s.name)+'</h2><p>'+esc(s.description)+'</p><div class="actions">'+button(s.id==='intake-only'?'Try scripted example':'Validate fixture','reference',s.id,true)+button('Set up agent run','external',s.id)+'</div></article>';
-  $('#content').innerHTML=card(scenarios.find(s=>s.id==='intake-only'))+'<details><summary>More scenarios and other runs</summary><div class="scenario-grid">'+scenarios.filter(s=>s.id!=='intake-only').map(card).join('')+'</div></details>'+
+  $('#content').innerHTML=card(scenarios.find(s=>s.id==='intake-only'))+agentControls()+'<details><summary>More scenarios and other runs</summary><div class="scenario-grid">'+scenarios.filter(s=>s.id!=='intake-only').map(card).join('')+'</div></details>'+
     '<details class="card"><summary>Run scenarios in parallel</summary><p>Select scenarios to run as independent background scripts. This checks the fixtures, not AI performance.</p><div class="parallel-options">'+scenarios.map(s=>'<label><input type="checkbox" name="batch" value="'+esc(s.id)+'">'+esc(s.name)+'</label>').join('')+'</div>'+button('Launch selected scenarios','batch')+'</details><h2>Attempts</h2><div id="attempts"></div>';
 }
 function listing(runs){
-  $('#attempts').innerHTML=runs.length?'<div class="table-wrap"><table><thead><tr><th>Scenario</th><th>Attempt</th><th>Who works</th><th>Status</th><th>Actions</th></tr></thead><tbody>'+runs.slice().reverse().map(r=>'<tr><td>'+esc(r.name)+'</td><td>Attempt '+r.attempt_number+'</td><td>'+(r.execution_mode==='reference_fixture'?'Script':'External agent')+'</td><td>'+esc(status(r))+'</td><td>'+attemptLinks(r.id)+'</td></tr>').join('')+'</tbody></table></div>':'<p>No attempts yet.</p>';
+  $('#attempts').innerHTML=runs.length?'<div class="table-wrap"><table><thead><tr><th>Scenario</th><th>Attempt</th><th>Who works</th><th>Status</th><th>Actions</th></tr></thead><tbody>'+runs.slice().reverse().map(r=>'<tr><td>'+esc(r.name)+'</td><td>Attempt '+r.attempt_number+'</td><td>'+(r.execution_mode==='model_agent'?'AI · '+esc(r.agent_metadata.name):r.execution_mode==='reference_fixture'?'Script':'External agent')+'</td><td>'+esc(status(r))+'</td><td>'+attemptLinks(r.id)+'</td></tr>').join('')+'</tbody></table></div>':'<p>No attempts yet.</p>';
 }
 function workspace(r){
   const s=r.state,lead=r.submission?s.leads.find(l=>l.id===r.submission.id):s.leads[0];
@@ -39,23 +53,32 @@ function activity(r){
   return '<section class="card" id="activity"><h2>Agent actions &amp; activity</h2><ol><li>Lab · Starting records prepared</li>'+events.map(e=>{
     const rec=e.after||e.before||{},tool=e.action==='tool.call';
     const msg=tool?(e.detail.error?'Failed: ':'Called ')+e.detail.operation:e.actor==='website'&&e.entity==='leads'?'Submitted website form':e.entity==='leads'&&e.action==='update'?'Inquiry → '+rec.status:e.action==='run.finish'?'Evidence frozen':e.action+' · '+e.entity+' · '+(rec.name||rec.title||rec.speaker||'record');
-    return '<li><details data-key="evt-'+esc(e.id)+'"><summary><strong>'+esc(who(e))+'</strong> · '+esc(msg)+'</summary>'+pretty(tool?{operation:e.detail.operation,request:e.detail.request,error:e.detail.error}:{before:e.before,after:e.after})+'</details></li>';
+    return '<li><details data-key="evt-'+esc(e.id)+'"><summary><strong>'+esc(who(e))+'</strong> · '+esc(msg)+'</summary>'+pretty(tool?e.detail:{before:e.before,after:e.after})+'</details></li>';
   }).join('')+'</ol></section>';
 }
 function detail(r){
   const opened=new Set([...document.querySelectorAll('details[open][data-key]')].map(e=>e.dataset.key));
   const script=r.execution_mode==='reference_fixture',open=r.status==='running'&&!r.job_state,res=r.results.at(-1);
-  $('#section-kicker').textContent=script?'SCRIPTED EXAMPLE · NOT AN AI EVALUATION':'EXTERNAL AGENT TEST';
+  $('#section-kicker').textContent=r.ai_state?'MODEL-BACKED AI ATTEMPT':script?'SCRIPTED EXAMPLE · NOT AN AI EVALUATION':'EXTERNAL AGENT TEST';
   $('#page-title').textContent=r.scenario.name+' · Attempt '+r.attempt_number;$('#description').textContent=r.assignment;
   const ctl=['<a class="badge" href="'+path(r.id)+'/workspace" target="_blank" rel="noopener">View attempt workspace ↗</a>'];
   if(open&&r.watch_mode&&!r.submission)ctl.push(button('Submit Jamie’s website form','submit',r.id,true));
   if(open&&r.watch_mode==='scripted'&&r.submission&&r.state.leads.find(x=>x.id===r.submission.id)?.status==='new')ctl.push(button('Run scripted conversion','script',r.id,true));
   if(open&&r.conversation_id)ctl.push(button('Caller speaks','actor',r.id),button('Human role-play','roleplay',r.id));
-  if((open&&(!r.watch_mode||r.submission))||(r.status==='finished'&&!res&&!r.job_state))ctl.push(button('Finish and evaluate','evaluate',r.id));
+  if(!['queued','working'].includes(r.ai_state)&&((open&&(!r.watch_mode||r.submission))||(r.status==='finished'&&!res&&!r.job_state)))ctl.push(button('Finish and evaluate','evaluate',r.id));
   if(r.status==='finished')ctl.push(button('Export evidence','export',r.id),button('Add expert review','review',r.id));
   const form=r.visitor_form&&!r.submission?'<details><summary>Preview Jamie’s website form</summary>'+pretty(r.visitor_form)+'</details>':'';
   const score=res?'<section class="card"><h2>'+res.passed+' of '+res.total+' checks passed</h2><p>Requires independent PI expert review for qualitative performance.</p>'+res.checks.map(c=>'<details data-key="check-'+esc(c.id)+'"><summary>'+esc(c.verdict+' · '+c.label)+'</summary>'+pretty(c.evidence)+'</details>').join('')+'</section>':'';
   $('#content').innerHTML='<a href="/lab">← Back to evaluation lab</a><section class="card"><strong>'+esc(status(r))+'</strong><div class="actions">'+ctl.join('')+'</div>'+form+(r.error?'<p class="error">'+esc(r.error)+'</p>':'')+'</section><div class="scenario-grid">'+workspace(r)+activity(r)+'</div>'+score+r.reviews.map(v=>'<p>Expert review: '+esc(v.verdict+' · '+v.reviewer+' · '+v.reason)+'</p>').join('');
+  if(r.ai_state){
+    const trace='<section class="card" id="runner"><h2>Model turns</h2><details data-key="profile"><summary>'+esc(r.agent_metadata.name)+' · v'+r.agent_metadata.version+' · '+esc(r.agent_metadata.model)+'</summary>'+pretty(r.agent_metadata)+'</details>'+
+      (r.stop_reason?'<p>Stopped: '+esc(r.stop_reason)+'</p>':'')+(r.runner_trace||[]).map((e,i)=>{
+        const changes=e.call?r.changes.filter(c=>c.tool_call_id===e.call):[];
+        return '<details data-key="trace-'+i+'"><summary>Turn '+e.turn+' · '+esc(e.event)+' '+esc(e.tool||'')+'</summary>'+pretty(e)+
+          (changes.length?'<strong>Workspace changes from this call</strong>'+pretty(changes.map(c=>({entity:c.entity,before:c.before,after:c.after}))):'')+'</details>'
+      }).join('')+'</section>';
+    $('#content .scenario-grid').insertAdjacentHTML('afterend',trace);
+  }
   for(const d of document.querySelectorAll('details[data-key]'))if(opened.has(d.dataset.key))d.open=true;
 }
 async function route(){
@@ -66,7 +89,7 @@ async function route(){
     try{
       const r=id?await op('run.inspect',{id}):await op('run.list');
       if(g!==generation)return;
-      const key=id?JSON.stringify([r.status,r.job_state,r.state.events.length,r.results.length,r.reviews.length,r.submission?.id]):JSON.stringify(r);
+      const key=id?JSON.stringify([r.status,r.job_state,r.ai_state,r.runner_trace?.length,r.state.events.length,r.results.length,r.reviews.length,r.submission?.id]):JSON.stringify(r);
       if(key!==last){last=key;if(id){current=r;detail(r)}else listing(r)}
       if(id&&r.status!=='running'&&(!r.job_state||!['queued','working'].includes(r.job_state))&&r.results.length)return;
     }catch(e){if(g===generation)error(e)}
@@ -76,7 +99,11 @@ async function route(){
 }
 async function start(el){
   const a=el.dataset.action,id=el.dataset.id;
-  if(a==='external'||a==='reference'){
+  if(a==='edit-agent'||a==='new-agent'){editProfile(a==='edit-agent'?agents.profiles.find(p=>p.id===$('#ai-profile').value):null);return}
+  if(a==='ai'){
+    const r=await op('run.create',{scenario_id:id,watch_mode:'ai',profile_id:$('#ai-profile').value});
+    history.pushState(null,'',path(r.id));await route();
+  }else if(a==='external'||a==='reference'){
     const response=a==='reference'&&id!=='intake-only'?await op('run.launch',{scenario_ids:[id]}):await op('run.create',{scenario_id:id,...(id==='intake-only'?{watch_mode:a==='external'?'external':'scripted'}:{})});
     history.pushState(null,'',path(response.id||response.attempts[0].id));await route();
     if(response.agent_token)dialog('Agent connection details','<p>No agent has started. Give the external agent only this attempt’s token.</p>'+pretty({assignment:response.assignment,world:response.world,agent_token:response.agent_token}));
@@ -102,7 +129,7 @@ window.addEventListener('popstate',()=>route().catch(error));
 async function boot(){
   let session;try{session=await api('/api/session')}catch{$('#login').hidden=false;return}
   if(session.role!=='controller'){location.replace('/workspace');return}
-  scenarios=await op('scenario.list');$('#login').hidden=true;$('#app').hidden=false;await route();
+  [scenarios,agents]=await Promise.all([op('scenario.list'),op('agent.list')]);$('#login').hidden=true;$('#app').hidden=false;await route();
 }
 $('#login-form').onsubmit=async e=>{e.preventDefault();try{await api('/api/login',{token:$('#token').value});$('#token').value='';await boot()}catch(err){$('#login-error').textContent=err.message}};
 $('#logout').onclick=async()=>{await api('/api/logout',{});location.assign('/lab')};

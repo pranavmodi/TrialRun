@@ -58,6 +58,17 @@ A mutation can commit and then return an injected 504. Retrying the same request
 
 Unchanged state does not satisfy the assignment. Wrong-record modifications remain detectable in history even if the final value is restored. An agent cannot access another world, change firm configuration, forge caller turns, inspect private scenario data, accept an attorney handoff as an intake user, reset a run, or mutate frozen evidence.
 
+## Managed intake runner acceptance — 2026-11-13
+
+Performed real local LFM2.5 inference, not reference conversions. Exercised
+profile editing, Run with AI, website submission, live observation in a second
+browser tab, freeze, grade, and the frozen workspace. On the hosted site a real
+attempt passed all five existing structural checks: the worker listed leads and
+requested conversion twice; CRM idempotence prevented a second case. Earlier
+attempts that guessed an ID or searched the wrong collection scored zero. A
+timeout was also observable and gradable. These are individual results, not a
+model reliability estimate. The runner does not award its own score.
+
 ## Reset button verification — 2026-11-11
 
 All 50 tests passed after adding the prominent empty-demo reset. The Chromium

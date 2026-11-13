@@ -32,6 +32,14 @@ class Service:
                             {"role":"controller","actor":"website","world":None},key)
 
     def execute(self, name, args, principal, key=None):
+        from .db import tool_call_id
+        correlation=key if isinstance(key,str) and len(key)==32 and all(x in "0123456789abcdef" for x in key) else None
+        handle=tool_call_id.set(correlation)
+        try:
+            return self._traced_execute(name,args,principal,key)
+        finally: tool_call_id.reset(handle)
+
+    def _traced_execute(self, name, args, principal, key):
         started=now()
         try:
             result=self._execute(name,args,principal,key)

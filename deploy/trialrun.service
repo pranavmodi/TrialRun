@@ -6,6 +6,7 @@ After=network.target
 User=trialrun
 Group=trialrun
 WorkingDirectory=/home/pranav/pi-firm-agent-lab
+EnvironmentFile=-/etc/trialrun/runner.env
 ExecStart=/opt/trialrun-venv/bin/firm-lab serve --host 127.0.0.1 --port 8810 --data /home/pranav/pi-firm-agent-lab/.local
 Restart=always
 RestartSec=3

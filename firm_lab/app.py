@@ -26,7 +26,9 @@ def create_app(data_root=None):
     async def lifespan(_):
         lab.recover_launches()
         try: yield
-        finally: await run_in_threadpool(lab.workers.shutdown)
+        finally:
+            await run_in_threadpool(lab.model_workers.shutdown, cancel_futures=True)
+            await run_in_threadpool(lab.workers.shutdown)
     app=FastAPI(title="PI Firm Lab",version="0.1.0",docs_url=None,redoc_url=None,lifespan=lifespan,description="Independent simulated workplace. No external delivery. Operation registry: /api/operations.")
     app.state.store=store; app.state.lab=lab; app.state.demo_id=demo_id
     def auth(request):

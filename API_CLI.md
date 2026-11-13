@@ -34,6 +34,8 @@ Every operation has CLI form: firm-lab call OPERATION --json 'ARGUMENTS'.
 
 | Operation | Roles | Arguments beyond world | Behavior |
 |---|---|---|---|
+| agent.list | C | none | Profiles, deployment model choices and configuration state |
+| agent.save | C | name, model, instructions, max_turns (1–20), timeout_seconds (10–300); id and version to edit | Create or revise a profile; old attempts retain their original settings |
 | world.list | C | scope optional | List all worlds (default); `scope: "firms"` returns ordinary firms only. The UI displays a plain name for one firm and a selector for multiple firms. Evaluation attempts are excluded. |
 | world.create | C | name, seed: realistic or empty | Create isolated world |
 | world.reset | C | seed optional | Reset demo/ordinary world; run worlds are protected. Header Reset demo uses explicit seed=empty on the website demo world. |
@@ -64,7 +66,7 @@ Every operation has CLI form: firm-lab call OPERATION --json 'ARGUMENTS'.
 | scenario.list | C | none | Scenario catalog including controller-private facts |
 | scenario.save | C | base_id, name, description, persona, options | Create a new scenario variant, preserving old version |
 | run.launch | C | scenario_ids | Start 1–8 independent scripted attempts, return IDs immediately. Four concurrent server workers; inspect job_state via run.list or run.inspect. |
-| run.create | C | scenario_id, agent_metadata, watch_mode optional | Create an isolated attempt. For intake-only, watch_mode scripted or external starts before website submission. Only external setup returns an agent token. |
+| run.create | C | scenario_id, agent_metadata, watch_mode optional; profile_id required for ai | For intake-only, scripted, external and ai watch modes start before submission. AI snapshots the profile and returns no credential. |
 | run.list | C | none | Run summaries with scenario ID, per-scenario attempt number and most recent grade outcome (null before grading). |
 | run.submit | C | id | Simulate the visitor submitting the form to this watched intake. Safe to retry. |
 | run.script | C | id | Convert the submitted inquiry using the scoped reference policy; scripted attempts only. Safe to retry. |
@@ -185,6 +187,20 @@ tokens. The hosting gateway also requires a session or bearer token for the
 simulated website and public-intake endpoint; anonymous CLI `submit` remains
 a local demo command. The gateway does not change operation permissions.
 ### Read-only attempt workspace
+
+Model-run CLI (equivalent to the lab UI):
+
+    firm-lab call agent.list
+    firm-lab call agent.save --file profile.json
+    firm-lab call run.create --json '{"scenario_id":"intake-only","watch_mode":"ai","profile_id":"intake-clerk"}'
+    firm-lab call run.submit --json '{"id":"RUN_ID"}'
+    firm-lab call run.inspect --json '{"id":"RUN_ID"}'
+    firm-lab call run.finish --json '{"id":"RUN_ID"}'
+    firm-lab call run.grade --json '{"id":"RUN_ID"}'
+
+Inspect returns ai_state, runner_trace, stop_reason, profile snapshot and workspace changes.
+Wait until the worker is stopped, failed or interrupted before freezing; export with run.export.
+
 
 `/lab/attempts/<run-id>/workspace` displays the controller-only `run.inspect`
 projection. Each lab attempt row links directly to this route. The same live or frozen records are available from

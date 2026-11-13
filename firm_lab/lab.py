@@ -4,6 +4,9 @@ Reference policies validate fixtures. They are not an AI benchmark.
 """
 import copy
 import json
+import os
+import httpx
+from . import runner
 from concurrent.futures import ThreadPoolExecutor
 from datetime import timedelta
 from .db import uid, now, rows, get, put, meta, LabError, audit
@@ -58,11 +61,20 @@ class LabService(Service):
     def __init__(self,store):
         super().__init__(store)
         self.workers=ThreadPoolExecutor(max_workers=4,thread_name_prefix="trialrun")
+        # One inference slot on the hosted CPU. Queued attempts are still independent;
+        # time spent waiting for a worker does not consume the model's time budget.
+        self.model_workers=ThreadPoolExecutor(max_workers=1,thread_name_prefix="trialrun-model")
 
     def recover_launches(self):
         # The local simulator runs one service process. Do not silently rerun a partial fixture.
         with self.store.control() as c:
             for r in rows(c,"runs"):
+                if r.get("watch_mode")=="ai" and r.get("ai_state") in ("queued","working"):
+                    r.update(ai_state="interrupted",stop_reason="Service restarted. Partial work was not replayed.")
+                    for grant in rows(c,"grants"):
+                        if grant["world"]==r["world"]:
+                            grant["revoked"]=True; put(c,"grants",grant)
+                    put(c,"runs",r)
                 if r.get("job_state") in ("queued","working"):
                     r.update(job_state="interrupted",error="Service stopped before the worker completed.")
                     if r["status"]=="running": r["status"]="environment_error"
@@ -70,6 +82,9 @@ class LabService(Service):
 
     def install_scenarios(self):
         with self.store.control() as c:
+            if runner.models() and not get(c,"profiles","intake-clerk",False):
+                put(c,"profiles",{"id":"intake-clerk","name":"Intake Clerk","version":1,"model":runner.models()[0],
+                    "instructions":runner.DEFAULT_INSTRUCTIONS,"max_turns":8,"timeout_seconds":180})
             for scenario in scenarios():
                 if not get(c,"scenarios",scenario["id"],False): put(c,"scenarios",scenario)
 
@@ -93,14 +108,40 @@ class LabService(Service):
             s["version"]=1
             return put(c,"scenarios",s)
 
+    @operation("agent.list","Show saved model agent profiles and configured models",ADMIN,control=True)
+    def agents(self,a,p):
+        with self.store.control() as c:
+            return {"profiles":rows(c,"profiles"),"models":runner.models(),"configured":bool(os.getenv("TRIALRUN_MODEL_URL") and runner.models())}
+
+    @operation("agent.save","Create or revise a model agent profile",ADMIN,True,True)
+    def save_agent(self,a,p):
+        if a.get("model") not in runner.models(): raise LabError("Select a configured model")
+        fields={}
+        for key,limit in (("name",80),("instructions",4000)):
+            value=a.get(key)
+            if not isinstance(value,str) or not 1<=len(value.strip())<=limit: raise LabError("Invalid "+key)
+            fields[key]=value.strip()
+        for key,default,low,high in (("max_turns",8,1,20),("timeout_seconds",180,10,300)):
+            v=a.get(key,default)
+            if type(v) is not int or not low<=v<=high: raise LabError("Invalid "+key)
+            fields[key]=v
+        with self.store.control() as c:
+            old=get(c,"profiles",a["id"]) if a.get("id") else {}
+            if old and old["version"]!=a.get("version"): raise LabError("Profile changed; reopen it",409)
+            return put(c,"profiles",dict(fields,id=old.get("id",uid()),version=old.get("version",0)+1,model=a["model"]))
+
     @operation("run.create","Create isolated scenario run",ADMIN,True,True)
     def run_create(self,a,p):
         with self.store.control() as c: scenario=copy.deepcopy(get(c,"scenarios",a["scenario_id"]))
         watch=a.get("watch_mode")
-        if watch is not None and (scenario["id"]!="intake-only" or watch not in ("external","scripted")):
-            raise LabError("Choose external or scripted watch mode for the intake scenario")
+        if watch is not None and (scenario["id"]!="intake-only" or watch not in ("external","scripted","ai")):
+            raise LabError("Choose external, scripted or AI watch mode for the intake scenario")
+        if watch=="ai":
+            with self.store.control() as c: profile=get(c,"profiles",a["profile_id"])
+            if profile["model"] not in runner.models() or not os.getenv("TRIALRUN_MODEL_URL"):
+                raise LabError("The model provider is not configured",503)
         world=self._create_world({"name":scenario["name"],"seed":"realistic"},kind="attempt")["id"]
-        grant=self.grant_create({"world":world,"role":"intake","actor":"evaluated-agent"},p) if watch!="scripted" else None
+        grant=self.grant_create({"world":world,"role":"intake","actor":"evaluated-agent"},p) if watch not in ("ai","scripted") else None
         with self.store.world(world) as c:
             contact=next(x for x in rows(c,"contacts") if x["phone"]=="+14155550122")
             matter=next(x for x in rows(c,"matters") if x["contact_id"]==contact["id"])
@@ -136,9 +177,11 @@ class LabService(Service):
              "actor_step":0,"execution_mode":"external","agent_metadata":a.get("agent_metadata",{"name":"external agent","model":"unspecified"})}
         if watch:
             run.update(watch_mode=watch,visitor_form=intake_form(scenario["persona"]),submission=None,execution_mode="reference_fixture" if watch=="scripted" else "external")
+        if watch=="ai":
+            run.update(agent_metadata=profile,runner_version=runner.HARNESS_VERSION,execution_mode="model_agent",ai_state="waiting",runner_trace=[])
         with self.store.control() as c: put(c,"runs",run)
         return {"id":run["id"],"world":world,"assignment":run["assignment"],"conversation_id":conversation_id,
-                **({"agent_token":grant["token"]} if watch!="scripted" else {}),"status":"running"}
+                **({"agent_token":grant["token"]} if grant else {}),"status":"running"}
 
     @operation("run.submit","Simulate the visitor submitting the website form",ADMIN,True,True)
     def submit(self,a,p):
@@ -147,8 +190,36 @@ class LabService(Service):
             if not run.get("watch_mode") or run["status"]!="running": raise LabError("Not an open watched intake",409)
             if run["submission"]: return run["submission"]
             run["submission"]=self.website_submission(run["world"],run["visitor_form"],"website-"+run["id"])
+            if run["watch_mode"]=="ai": run["ai_state"]="queued"
             put(c,"runs",run)
-            return run["submission"]
+        if run["watch_mode"]=="ai": self.model_workers.submit(self._run_ai,run["id"])
+        return run["submission"]
+
+    def _run_ai(self,id):
+        def update(**values):
+            with self.store.control() as c:
+                r=get(c,"runs",id); r.update(values); put(c,"runs",r)
+        def report(entry):
+            with self.store.control() as c:
+                r=get(c,"runs",id); r["runner_trace"].append(dict(entry,at=now())); put(c,"runs",r)
+        with self.store.control() as c:
+            r=get(c,"runs",id)
+            if r["ai_state"]!="queued": return
+            r["ai_state"]="working"; put(c,"runs",r)
+        grant=None
+        try:
+            grant=self.grant_create({"world":r["world"],"role":"intake","actor":"evaluated-agent"},None)
+            reason=runner.run_model(r["agent_metadata"],r["assignment"],grant["token"],report)
+            state="stopped"
+        except httpx.HTTPStatusError as exc:
+            state,reason="failed",f"Provider or lab returned HTTP {exc.response.status_code}."
+        except (TimeoutError,httpx.TimeoutException):
+            state,reason="failed","Time limit or connection timeout."
+        except Exception as exc:
+            state,reason="failed","Runner error: "+type(exc).__name__
+        finally:
+            if grant: self.grant_revoke({"id":grant["id"]},None)
+        update(ai_state=state,stop_reason=reason)
 
     @operation("run.script","Perform the scripted intake conversion",ADMIN,True,True)
     def script(self,a,p):
@@ -170,7 +241,7 @@ class LabService(Service):
                 SELECT id, json_extract(data,'$.world') AS world, json_extract(data,'$.status') AS status,
                   json_extract(data,'$.created_at') AS created_at, json_extract(data,'$.execution_mode') AS execution_mode,
                   json_extract(data,'$.agent_metadata') AS agent_metadata, json_extract(data,'$.scenario.name') AS name, json_extract(data,'$.job_state') AS job_state,
-                  json_extract(data,'$.scenario.id') AS scenario_id,
+                  json_extract(data,'$.scenario.id') AS scenario_id,json_extract(data,'$.ai_state') AS ai_state,
                   row_number() OVER (PARTITION BY json_extract(data,'$.scenario.id') ORDER BY rowid) AS attempt_number
                 FROM runs ORDER BY rowid""")]
 
@@ -212,6 +283,7 @@ class LabService(Service):
         with self.store.control() as control:
             r=get(control,"runs",a["id"])
             if r["status"]=="finished": return {"id":r["id"],"status":"finished"}
+            if r.get("ai_state") in ("queued","working"): raise LabError("Wait for the model worker to stop before grading",409)
             if r.get("watch_mode") and not r["submission"]: raise LabError("Submit the test inquiry before evaluation",409)
             with self.store.world(r["world"]) as c:
                 m=meta(c); m["frozen"]=True; put(c,"meta",m)

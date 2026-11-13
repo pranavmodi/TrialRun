@@ -59,3 +59,13 @@ Each lab attempt row and the attempt inspector link to a separate read-only firm
 attempt ID, not the operator's practice firm. The controller can inspect records
 and follow their relationships while the attempt runs or after it is frozen.
 Viewing records must not change the world, action log, or grade.
+
+### Managed AI worker: first scenario
+
+A controller selects a versioned clerk profile and creates an intake-only AI attempt.
+The saved website inquiry queues exactly one worker in the single service process.
+The model chooses actions using a role-scoped CRM tool set; it is not shown fixture
+solutions, evaluator state or credentials. Calls and results are recorded per turn,
+and successful changes can be correlated with the invocation. The grader is unchanged.
+Closing the browser does not stop work. Interrupted attempts are inspectable and
+gradable but are not replayed. Worker exit and evaluation outcome are separate.

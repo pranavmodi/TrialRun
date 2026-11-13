@@ -1,0 +1,18 @@
+[Unit]
+Description=TrialRun local inference (fictional intake evaluations)
+After=network.target
+
+[Service]
+User=trialrun
+Group=trialrun
+WorkingDirectory=/opt/trialrun-model
+ExecStart=/opt/trialrun-model/llama-server -m /opt/trialrun-model/intake.gguf --alias lfm-intake --host 127.0.0.1 --port 8811 --api-key-file /etc/trialrun/model.key --no-webui --jinja --parallel 1 -c 6144 -t 2 --sleep-idle-seconds 60
+Restart=on-failure
+Nice=10
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

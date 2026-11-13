@@ -71,6 +71,36 @@ final snapshot. The practice firm and other attempts remain separate.
 
 ## Evaluate an agent
 
+**Run a real model:** under Convert one website inquiry, select the **Intake Clerk**
+profile (or choose **New profile**), then **Run with AI**. Open **View attempt
+workspace**, then click **Submit Jamie’s website form** on the attempt page.
+Watch **Agent actions & activity** for changes and **Model turns** for requests,
+results, errors and the final answer. When the worker stops, click **Finish and
+evaluate**. A completed model response does not imply a passing grade. Profile
+edits do not change earlier attempts. No records go to a real firm.
+
+**Provider setup:** configure a trusted server-side Chat Completions endpoint
+that supports function calling. Set TRIALRUN_MODEL_URL (base URL ending in /v1/),
+TRIALRUN_MODELS (comma-separated allowed model IDs), TRIALRUN_MODEL_KEY_FILE if
+authentication is required, and TRIALRUN_LAB_URL (the lab’s own origin reachable
+by the runner). Never point the credential-bearing lab client at a model provider.
+If using an external provider, fictional record data is sent there. The hosted
+demo uses loopback-only llama.cpp with LiquidAI/LFM2.5-1.2B-Instruct Q4_K_M,
+alias lfm-intake. See deploy/local-runner.env.example and deploy/trialrun-model.service.
+The service expects llama-server in /opt/trialrun-model, the weights as intake.gguf,
+and a private key file readable by the service account. Weights and keys are not in Git.
+The model service sleeps after 60 seconds idle; the first turn can take longer.
+Managed attempts queue for one inference slot per lab process; scripted jobs use a separate pool.
+The managed clerk starts with search and lookup tools; a nonempty observation
+unlocks the remaining CRM actions. It must choose its own records and actions.
+No scenario-specific conversion is executed automatically. The model can fail.
+The hosted deployment uses [llama.cpp b12360](https://github.com/ggml-org/llama.cpp/releases/tag/b12360)
+and [these pinned model weights](https://huggingface.co/LiquidAI/LFM2.5-1.2B-Instruct-GGUF/tree/8ed288026e23958ad9dfa92d53ed773a8eee7125).
+An alternative function-calling endpoint can implement the
+[Chat Completions protocol](https://developers.openai.com/api/reference/resources/chat/subresources/completions/methods/create).
+To run the isolated live browser acceptance test, load the above provider variables
+and set TRIALRUN_LIVE_TEST=1 when running pytest tests/test_ai_browser.py.
+
 Evaluation lab opens on **Convert one website inquiry**. **Try scripted example**
 opens a scenario page with the attempt’s live workspace state and action log side by side. Click **Submit Jamie’s website form**, then **Run scripted conversion**, then **Finish and evaluate**. Activity shows who made each change. Open the attempt URL in another tab or share it with another signed-in controller. No firm navigation is needed. No AI runs in the scripted example.
 **Set up agent run** creates the same isolated intake test for your external
@@ -84,7 +114,7 @@ start from the same scenario setup, not from the previous attempt. Open **View
 attempt** to revisit its records and actions on the scenario page. The test never changes
 your firm. The header shows Harbor & Stone as plain text when it is the only firm. A switcher appears only for multiple firms and never includes test attempts.
 
-Choose **Run scenarios in parallel** in the library, select up to eight scenarios and click **Launch selected scenarios**. Up to four background scripts execute concurrently; additional jobs wait. Close a tab without stopping the work. Click **View attempt** for live records, actions and the final score. External-agent attempts can also overlap, each using its own token and agent process; the lab does not launch an LLM.
+Choose **Run scenarios in parallel** in the library, select up to eight scenarios and click **Launch selected scenarios**. Up to four workers execute concurrently; additional jobs wait. Close a tab without stopping the work. Click **View attempt** for live records, actions and the final score. External-agent attempts can also overlap, each using its own token and agent process; only **Run with AI** calls the configured model.
 
 For those other scenarios:
 

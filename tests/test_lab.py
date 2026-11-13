@@ -27,6 +27,43 @@ def good(response):
     assert response.status_code==200,response.text
     return response.json()
 
+def test_managed_model_lifecycle_and_isolation(env,monkeypatch):
+    import threading
+    from firm_lab import runner
+    app,client,call,headers=env
+    monkeypatch.setenv("TRIALRUN_MODELS","test-model")
+    monkeypatch.setenv("TRIALRUN_MODEL_URL","http://provider.invalid/v1")
+    profile=good(call("agent.save",dict(name="Test clerk",instructions="Use the inbox.",model="test-model")))
+    r=good(call("run.create",dict(scenario_id="intake-only",watch_mode="ai",profile_id=profile["id"])))
+    assert "agent_token" not in r
+    args={"id":r["id"]}
+    revised=good(call("agent.save",{**profile,"name":"Changed"}))
+    assert revised["version"]==2 and good(call("run.inspect",args))["agent_metadata"]==profile
+    assert call("agent.save",profile).status_code==409
+    started,release=threading.Event(),threading.Event()
+    grants=[]
+    def fake(profile,assignment,token,report):
+        grants.append(token)
+        principal=app.state.store.authenticate(token)
+        assert principal["world"]==r["world"] and principal["role"]=="intake"
+        assert "Jamie Rivera" not in assignment
+        started.set()
+        assert release.wait(5)
+        raise TimeoutError
+    monkeypatch.setattr(runner,"run_model",fake)
+    good(call("run.submit",args))
+    assert started.wait(4)
+    good(call("run.submit",args))
+    h={"Authorization":"Bearer "+grants[0]}
+    assert client.post("/api/ops/agent.list",headers=h,json={}).status_code==403
+    assert call("run.finish",args).status_code==409
+    release.set()
+    app.state.lab.model_workers.shutdown()
+    assert len(grants)==1 and good(call("run.inspect",args))["ai_state"]=="failed"
+    assert client.get("/api/session",headers=h).status_code==401
+    good(call("run.finish",args))
+    assert good(call("run.grade",args))["passed"]==0
+
 def state(env): return good(env[2]("world.state"))["data"]
 def create(env,entity,data): return good(env[2]("records.create",{"entity":entity,"data":data}))
 
