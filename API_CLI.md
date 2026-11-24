@@ -72,6 +72,10 @@ Every operation has CLI form: firm-lab call OPERATION --json 'ARGUMENTS'.
 | run.script | C | id | Convert the submitted inquiry using the scoped reference policy; scripted attempts only. Safe to retry. |
 | run.inspect | C | id | Read-only attempt number, state, business-record changes since setup, results and reviews; finished attempts use frozen evidence. |
 | actor.respond | C | id (run), text optional | Next scripted caller turn or human role-play |
+| call.start | C | mode: human (default) or demo; profile_id (default intake-clerk) | Start a fresh office phone attempt. |
+| call.turn | C | id, sequence, text (human only) | Append one caller turn and queue the real clerk. Use current call_seq, starting at 0. |
+| call.retry | C | id | Retry a failed/interrupted reply without duplicating caller speech. |
+| call.end | C | id | Hang up and freeze evidence; then run.grade. |
 | run.finish | C | id | Freeze business state and evaluation evidence |
 | run.grade | C | id | Append deterministic structural evaluation of frozen evidence |
 | review.add | C | id (run), reviewer, verdict, reason | Append human review (pass/fail/uncertain) |
@@ -157,6 +161,17 @@ Parallel example: `firm-lab call run.launch --json '{"scenario_ids":["intake-onl
 UI equivalents: **Try scripted example** → `run.create` with `watch_mode: "scripted"`; **Set up agent run** uses `watch_mode: "external"`. Next call `run.submit` with the run ID. For scripted runs call `run.script`; otherwise connect your own agent. Use `run.inspect` between steps to see the current records and events since `timeline_start`. The noninteractive `run.reference` still runs the whole fixture at once; **Finish and evaluate** → `run.finish`, then `run.grade`. `run.list` includes `scenario_id` so the dashboard or a CLI client can group new and historical attempts.
     firm-lab call run.inspect --json '{"id":"RUN_ID"}'
     firm-lab call actor.respond --json '{"id":"RUN_ID","text":"My email has changed. Can you update it?"}'
+
+Office phone from the CLI (same operations as the desk phone):
+
+    firm-lab call call.start --json '{"mode":"human","profile_id":"intake-clerk"}'
+    firm-lab call call.turn --json '{"id":"RUN_ID","sequence":0,"text":"I was cycling when a van hit me."}'
+    firm-lab call run.inspect --json '{"id":"RUN_ID"}'
+    firm-lab call call.end --json '{"id":"RUN_ID"}'
+    firm-lab call run.grade --json '{"id":"RUN_ID"}'
+
+Wait for ai_state=listening before the next turn. Inspect state.turns, state.leads,
+runner_trace and call_seq. A completed model reply is not proof of clinical or legal quality.
     firm-lab call run.finish --json '{"id":"RUN_ID"}'
     firm-lab call run.grade --json '{"id":"RUN_ID"}'
     firm-lab call run.export --json '{"id":"RUN_ID"}'

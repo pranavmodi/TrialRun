@@ -68,14 +68,7 @@ TOOL_HELP = {
 }
 
 
-def run_model(profile, assignment, token, report):
-    deadline = time.monotonic() + profile["timeout_seconds"]
-    def remaining():
-        budget = deadline - time.monotonic()
-        if budget <= 0:
-            raise TimeoutError("Time limit reached")
-        return budget
-
+def provider_options(profile):
     engine=profile.get("provider","local")
     if engine=="openclaw":
         options={"base_url":"http://bridge","transport":httpx.HTTPTransport(uds=os.environ["TRIALRUN_OPENCLAW_SOCKET"])}
@@ -85,6 +78,18 @@ def run_model(profile, assignment, token, report):
             key = Path(os.environ["TRIALRUN_MODEL_KEY_FILE"]).read_text().strip()
         options={"base_url":os.environ["TRIALRUN_MODEL_URL"].rstrip("/"),"headers":{"Authorization":"Bearer "+key} if key else {}}
     else: raise ValueError("Unknown provider")
+    return options
+
+
+def run_model(profile, assignment, token, report):
+    engine=profile.get("provider","local")
+    options=provider_options(profile)
+    deadline = time.monotonic() + profile["timeout_seconds"]
+    def remaining():
+        budget = deadline - time.monotonic()
+        if budget <= 0:
+            raise TimeoutError("Time limit reached")
+        return budget
     with httpx.Client(trust_env=False,**options) as provider, \
          httpx.Client(base_url=os.environ.get("TRIALRUN_LAB_URL","http://127.0.0.1:8810"), trust_env=False,
                       headers={"Authorization":"Bearer "+token}) as lab:

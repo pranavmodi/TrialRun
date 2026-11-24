@@ -7,6 +7,7 @@ import json
 import os
 import httpx
 from . import runner
+from .phone import PhoneCalls
 from concurrent.futures import ThreadPoolExecutor
 from datetime import timedelta
 from .db import uid, now, rows, get, put, meta, LabError, audit
@@ -57,7 +58,7 @@ def intake_form(person):
             "summary":"Rear-ended at a traffic light.","incident_date":"2026-11-06",
             "location":"San Francisco","injury":"My shoulder is sore. I have not seen a doctor yet."}
 
-class LabService(Service):
+class LabService(PhoneCalls,Service):
     def __init__(self,store):
         super().__init__(store)
         self.workers=ThreadPoolExecutor(max_workers=4,thread_name_prefix="trialrun")
@@ -69,7 +70,7 @@ class LabService(Service):
         # The local simulator runs one service process. Do not silently rerun a partial fixture.
         with self.store.control() as c:
             for r in rows(c,"runs"):
-                if r.get("watch_mode")=="ai" and r.get("ai_state") in ("queued","working"):
+                if (r.get("watch_mode")=="ai" or r.get("call_mode")) and r.get("ai_state") in ("queued","working"):
                     r.update(ai_state="interrupted",stop_reason="Service restarted. Partial work was not replayed.")
                     for grant in rows(c,"grants"):
                         if grant["world"]==r["world"]:
@@ -268,6 +269,7 @@ class LabService(Service):
         with self.store.control() as c:
             r=get(c,"runs",a["id"])
             if r["status"]!="running": raise LabError("Run is closed",409)
+            if r.get("call_mode"):raise LabError("Use call.turn for this phone attempt",409)
             if not r["conversation_id"]: raise LabError("This form-only scenario has no caller conversation",409)
             person=r["scenario"]["persona"]
             speech=[
@@ -307,6 +309,16 @@ class LabService(Service):
         checks=[]
         def check(id,label,passed,dimension,evidence):
             checks.append({"id":id,"label":label,"verdict":"passed" if passed else "failed","dimension":dimension,"evidence":evidence})
+        if run.get("call_mode"):
+            turns=[t for t in final["turns"] if t["conversation_id"]==run["conversation_id"]]
+            check("conversation","At least one caller turn; each received a clerk reply",len(turns)>=3 and
+                  [t["speaker"] for t in turns]==["agent"]+["caller","agent"]*run["call_seq"],"responsiveness",[t["id"] for t in turns])
+            leads=[l for l in final["leads"] if l.get("source")=="Office phone"]
+            check("intake","One phone inquiry with caller-supplied name, number and incident",len(leads)==1 and
+                  all(leads[0].get(k) and any(leads[0][k].casefold() in t["text"].casefold() for t in turns if t["speaker"]=="caller")
+                      for k in ("name","phone","summary")),"data integrity",[l["id"] for l in leads])
+            check("scope","Existing contacts and cases unchanged; no messages sent",all(final[k]==initial[k] for k in ("contacts","matters","messages")),"scope",["workspace comparison"])
+            return self._save_grade(run,checks)
         if options.get("intake_only"):
             actor="reference-script" if run.get("watch_mode")=="scripted" else "evaluated-agent"
             self._intake_checks(initial,final,check,run.get("submission"),actor)

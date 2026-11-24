@@ -214,6 +214,16 @@ if WebGL is unavailable. To rebuild the self-hosted renderer: `npm ci && npm run
 
 ### Choose local inference or OpenClaw
 
+**Be the caller:** In the office or Evaluation Lab, choose **Start call scenario →
+Me — be the caller → Ring the office**. Type, or use your browser's microphone
+dictation, check the words, and select **Send turn**. The clerk responds to the
+conversation using the selected inference profile's provider/model. Select **Enable
+sound** if necessary. **Minimize** to use the CRM; select the desk phone to return.
+**End call** freezes and grades the attempt. Only fictional information belongs
+here. Browser speech recognition may use its vendor’s service; TrialRun stores the
+transcript, not microphone audio. This is turn-based, not a PSTN or full-duplex call.
+Jamie mode uses a labeled scripted caller and the same model-backed clerk.
+
 In **Evaluation Lab → Model-backed agent**, choose **Intake Clerk · Local model**
 or **Gateway Clerk · OpenClaw gateway**. Click **Run with AI**, then **Submit
 Jamie’s website form**. Watch **Model turns** and **Workspace state**; finish

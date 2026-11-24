@@ -1,4 +1,7 @@
 /* The room is its own destination. Its viewport never inherits the lab grid. */
+.phone-console{position:absolute;z-index:2;top:clamp(88px,16vh,155px);right:clamp(10px,3vw,48px);width:min(400px,calc(100vw - 20px));max-height:61dvh;overflow:auto;background:#172e29f5;color:#f5ecda;border:1px solid #ab9774;border-radius:12px;padding:14px 17px;box-shadow:0 16px 45px #0d191d66}
+.phone-console header,.phone-buttons{display:flex;align-items:center;justify-content:space-between;gap:6px;flex-wrap:wrap}.phone-console header strong{font:24px Georgia,serif}.phone-console button{font-size:13px;padding:6px 9px}.phone-console .phone-state,.phone-console small{color:#e0cb9f}.phone-console label,.phone-console .phone-error{color:#ffebc8}.phone-lines{max-height:18dvh;overflow:auto;padding:0;list-style:none}.phone-lines li{padding:7px 0;border-bottom:1px solid #ffffff28;font-size:14px}.phone-lines b{display:block;color:#e0c591}.phone-compose textarea{width:100%;min-height:52px;background:#fffdf6;color:#18352d}.phone-buttons{justify-content:flex-start;margin-top:7px}.phone-error:empty{display:none}
+@media(max-width:760px){.phone-console{top:65px;max-height:58dvh}}
 .office-mode #app>.lab-bar,.office-mode .lab-main>:not(#content){display:none}
 .office-mode .lab-main{max-width:none;margin:0;padding:0}
 #office-desk{position:fixed;inset:0;isolation:isolate;overflow:hidden;background:radial-gradient(ellipse at 45% 42%,#546659 0%,#384b40 36%,#20332e 68%,#132722 100%);color:#fbf2de;font:400 16px/1.45 system-ui,sans-serif;--line:#f2deaf55;--glass:#1a2b25ef}

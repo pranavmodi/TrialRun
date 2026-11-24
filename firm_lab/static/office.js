@@ -22,6 +22,7 @@ const officeDesk=(()=>{
       '<div class="room-camera" aria-label="Camera controls"><button data-view title="Switch between the seated desk and the orbital room model">Room model</button><button data-camera="in" title="Zoom in" aria-label="Zoom in">+</button><button data-camera="out" title="Zoom out" aria-label="Zoom out">−</button><button data-camera="home" title="Return to the opening view" aria-label="Reset camera">⌂</button></div>'+
       '<aside class="room-inspector" hidden><button class="room-dismiss" aria-label="Close station">×</button><div class="desk-detail"></div></aside>'+
       '<footer class="room-dock"><div class="room-dock-head"><span class="room-status"></span><span class="room-guide">Drag to orbit · Scroll or pinch to zoom</span></div><div class="room-nav" aria-label="Office stations">'+Object.keys(names).map(station).join('')+'<button data-replay aria-expanded="false">Replay</button></div><div class="desk-rail" hidden></div></footer>';
+    root.querySelector('.room-nav').insertAdjacentHTML('beforeend','<button data-call-launch>Start call scenario</button>');
     document.querySelector('#content').replaceChildren(root);mount=root;document.title='Harbor & Stone · Attempt '+run.attempt_number+' · TrialRun';
     import('/static/office-scene.js').then(mod=>{if(root!==mount)return;renderer=mod;loadView()}).catch(()=>{if(root===mount)fallback()});
   }
@@ -50,6 +51,7 @@ const officeDesk=(()=>{
   window.addEventListener('message',evt=>{if(evt.origin!==location.origin||!computer||evt.source!==computer.querySelector('iframe')?.contentWindow||evt.data?.id!==run?.id)return;
     if(evt.data.kind==='office.crm.ready')postState();if(evt.data.kind==='office.crm.exit')computer.close()});
   function pick(k){clearTimeout(arrival);selection=k;view?.focus(k);paint();
+    if(k==='phone'&&run.call_mode&&run.status==='running'&&cursor===null){mount.querySelector('.room-inspector').hidden=true;officePhone.openPanel();return}
     if(k==='monitor'){if(!view||matchMedia('(prefers-reduced-motion: reduce)').matches)openComputer();else arrival=setTimeout(openComputer,520)}
     else mount.querySelector('.room-dismiss').focus({preventScroll:true})}
   function dismiss(){clearTimeout(arrival);const k=selection;selection=null;view?.home();paint();if(k)mount.querySelector('[data-station="'+k+'"]').focus({preventScroll:true})}
@@ -81,9 +83,10 @@ const officeDesk=(()=>{
     if(n!==leadCount){leadCount=n;view?.count(n)}
     root.querySelector('.room-status').textContent='Attempt '+run.attempt_number+'  /  '+mode;
     root.querySelectorAll('[data-station]').forEach(b=>b.setAttribute('aria-pressed',b.dataset.station===selection));
-    root.querySelector('.room-inspector').hidden=!selection||selection==='monitor';
+    root.querySelector('.room-inspector').hidden=!selection||selection==='monitor'||(selection==='phone'&&run.call_mode&&run.status==='running'&&cursor===null);
     if(selection&&selection!=='monitor')root.querySelector('.desk-detail').innerHTML='<small class="room-overline">DESK STATION &nbsp; / &nbsp; '+actions[selection].toUpperCase()+'</small><h2>'+names[selection]+'</h2><p>'+descriptions[selection]+'</p>'+panel[selection]();
     if(computer)postState();
+    officePhone.render(run,cursor===null);
     root.querySelector('.desk-rail').innerHTML='<div><small>RECORDED EVENTS &nbsp; '+i+' / '+ev.length+'</small><p>'+e(actor?actor+' · ':'')+e(caption)+'</p></div><div class="desk-buttons"><button data-step="back" '+(!i?'disabled':'')+'>Previous</button><button data-step="next" '+(i===ev.length?'disabled':'')+'>Next</button><button data-step="end" '+(cursor===null?'disabled':'')+'>'+(run.status==='running'?'Back to live':'Final state')+'</button></div>';
   }
   document.addEventListener('click',evt=>{const b=evt.target.closest('#office-desk button');if(!b||!run)return;
@@ -99,5 +102,5 @@ const officeDesk=(()=>{
     paint();(document.querySelector('#office-desk '+selector+':not(:disabled)')||document.querySelector('#office-desk [data-replay]')).focus({preventScroll:true});
   });
   document.addEventListener('keydown',e=>{if(e.key==='Escape'&&mount&&selection&&!computer)dismiss()});
-  return {render(r){run=r;if(!mount)shell();paint()},leave(){clearTimeout(arrival);computer?.remove();computer=null;view?.destroy();view=null;mount=null;run=null;selection=null;cursor=null;leadCount=0;model=false;renderer=null}};
+  return {render(r){run=r;if(!mount)shell();paint()},leave(){officePhone.leave();clearTimeout(arrival);computer?.remove();computer=null;view?.destroy();view=null;mount=null;run=null;selection=null;cursor=null;leadCount=0;model=false;renderer=null}};
 })();

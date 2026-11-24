@@ -89,3 +89,12 @@ is an interior camera with bounded pan/zoom; the separate 3D cutaway supports
 free orbit. Entering its monitor opens the full CRM in place. Its contents
 must come only from the parent attempt and selected replay frame. Leaving the
 computer returns to that office, never to the practice firm.
+
+An office call starts a new world, independently of the observed attempt.
+A human can dictate or type arbitrary turns; a demo caller can supply scripted
+ones. A real model reads only call-local dialogue and extracted facts. Bounded
+CRM writes may create or correct one lead once name, phone and incident are
+available. Only caller-sourced spans are eligible for storage. Phone grading
+checks responsiveness, an evidenced lead and preservation of unrelated records;
+semantic accuracy and empathy require review. Provider failures stay visible and
+retryable. Hangup freezes the run; no outbound telephone or mail delivery occurs.

@@ -42,6 +42,7 @@ function library(){
     '<details class="card"><summary>Run scenarios in parallel</summary><p>Select scenarios to run as independent background scripts. This checks the fixtures, not AI performance.</p><div class="parallel-options">'+scenarios.map(s=>'<label><input type="checkbox" name="batch" value="'+esc(s.id)+'">'+esc(s.name)+'</label>').join('')+'</div>'+button('Launch selected scenarios','batch')+'</details><h2>Attempts</h2><div id="attempts"></div>';
 }
 function listing(runs){
+  if(!$('#phone-launch'))$('#content .launch-grid').insertAdjacentHTML('afterend','<section id="phone-launch" class="card"><p class="eyebrow">OFFICE PHONE</p><h2>After-hours intake call</h2><p>Play the caller or listen to a fictional caller and a live AI clerk.</p><button data-call-launch>Start call scenario</button></section>');
   $('#attempts').innerHTML=runs.length?'<div class="table-wrap"><table><thead><tr><th>Scenario</th><th>Attempt</th><th>Who works</th><th>Status</th><th>Actions</th></tr></thead><tbody>'+runs.slice().reverse().map(r=>'<tr><td>'+esc(r.name)+'</td><td>Attempt '+r.attempt_number+'</td><td>'+(r.execution_mode==='model_agent'?'AI · '+esc(r.agent_metadata.name):r.execution_mode==='reference_fixture'?'Script':'External agent')+'</td><td>'+statusPill(status(r))+'</td><td>'+attemptLinks(r.id)+'</td></tr>').join('')+'</tbody></table></div>':'<div class="empty"><strong>No attempts yet.</strong><p>Start a scripted example or choose a clerk to run a test.</p></div>';
 }
 function workspace(r){
@@ -69,7 +70,7 @@ function detail(r){
   const ctl=[officeLink(r.id),'<a class="badge" href="'+path(r.id)+'/workspace" target="_blank" rel="noopener">View attempt workspace ↗</a>'];
   if(open&&r.watch_mode&&!r.submission)ctl.push(button('Submit Jamie’s website form','submit',r.id,true));
   if(open&&r.watch_mode==='scripted'&&r.submission&&r.state.leads.find(x=>x.id===r.submission.id)?.status==='new')ctl.push(button('Run scripted conversion','script',r.id,true));
-  if(open&&r.conversation_id)ctl.push(button('Caller speaks','actor',r.id),button('Human role-play','roleplay',r.id));
+  if(open&&r.conversation_id&&!r.call_mode)ctl.push(button('Caller speaks','actor',r.id),button('Human role-play','roleplay',r.id));
   if(!['queued','working'].includes(r.ai_state)&&((open&&(!r.watch_mode||r.submission))||(r.status==='finished'&&!res&&!r.job_state)))ctl.push(button('Finish and evaluate','evaluate',r.id));
   if(r.status==='finished')ctl.push(button('Export evidence','export',r.id),button('Add expert review','review',r.id));
   const form=r.visitor_form&&!r.submission?'<details><summary>Preview Jamie’s website form</summary>'+pretty(r.visitor_form)+'</details>':'';
