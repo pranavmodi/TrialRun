@@ -87,6 +87,7 @@ def test_human_caller_real_browser_and_provider(tmp_path):
             p.goto(url+"/lab");p.get_by_label("Lab access token").fill((tmp_path/"controller.token").read_text().strip())
             p.get_by_role("button",name="Open lab").click()
             p.get_by_role("button",name="Start call scenario").click()
+            p.get_by_label("Who is calling?").select_option("human")
             if os.getenv("TRIALRUN_PHONE_PROFILE"):p.get_by_label("Clerk model").select_option(os.environ["TRIALRUN_PHONE_PROFILE"])
             p.get_by_role("button",name="Ring the office").click()
             panel=p.get_by_label("Office call",exact=True);expect(panel).to_be_visible()

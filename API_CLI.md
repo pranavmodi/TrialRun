@@ -72,7 +72,7 @@ Every operation has CLI form: firm-lab call OPERATION --json 'ARGUMENTS'.
 | run.script | C | id | Convert the submitted inquiry using the scoped reference policy; scripted attempts only. Safe to retry. |
 | run.inspect | C | id | Read-only attempt number, state, business-record changes since setup, results and reviews; finished attempts use frozen evidence. |
 | actor.respond | C | id (run), text optional | Next scripted caller turn or human role-play |
-| call.start | C | mode: human (default) or demo; profile_id (default intake-clerk) | Start a fresh office phone attempt. |
+| call.start | C | mode: live, human (API default), or demo; profile_id for turn-based calls | Start a fresh office phone attempt. Live uses the server-configured Gemini model. |
 | call.turn | C | id, sequence, text (human only) | Append one caller turn and queue the real clerk. Use current call_seq, starting at 0. |
 | call.retry | C | id | Retry a failed/interrupted reply without duplicating caller speech. |
 | call.end | C | id | Hang up and freeze evidence; then run.grade. |
@@ -91,7 +91,7 @@ Read the complete machine-readable schema using firm-lab schema. Records include
 - matters: title, contact_id, stage, matter_type, summary, injury, incident_date, location, priority, severity, shopping, owner_id, consent, custom_fields.
 - notes: matter_id, body.
 - staff (controller writes): name, role, available, available_from, available_until.
-- tasks: matter_id, title, assignee_id, due_at, kind, status.
+- tasks: exactly one of matter_id or lead_id, plus title, assignee_id, due_at, kind, status.
 - messages: matter_id, channel, to, subject, body; controller may create direction=inbound. Delivery status/attempts are managed by message.send. Sent/failed messages cannot be rewritten.
 - appointments: matter_id, staff_id, title, start_at, end_at, status.
 - documents: matter_id, name, content, kind. Content edits retain earlier text in history.
@@ -163,6 +163,14 @@ UI equivalents: **Try scripted example** → `run.create` with `watch_mode: "scr
     firm-lab call actor.respond --json '{"id":"RUN_ID","text":"My email has changed. Can you update it?"}'
 
 Office phone from the CLI (same operations as the desk phone):
+
+For realtime, `agent.list.live_voice` indicates whether a key is configured (not a live health check). Start with `firm-lab call call.start --json '{"mode":"live"}'`. Use `firm-lab voice RUN_ID` to stream mono, signed 16-bit little-endian 16 kHz PCM on stdin and receive 24 kHz PCM on stdout. For example on Linux with PulseAudio:
+
+    parec --raw --format=s16le --channels=1 --rate=16000 | firm-lab voice RUN_ID | pacat --raw --format=s16le --channels=1 --rate=24000
+
+Use headphones. Disconnecting the stream does not grade it: call `call.end`, then `run.grade`. `run.inspect` shows turns, lead, callback task, tool arguments and outcomes. Browser/API transport: authenticated `WS /api/voice/{RUN_ID}`, same-origin controller cookie or CLI bearer. Wait for JSON `{"type":"ready"}` before sending binary PCM; JSON `interrupted` means discard queued playback. Send the text frame `stop` and wait for close before freezing. Reconnect explicitly after microphone denial or network loss. Up to two concurrent sessions per single-process service, eight minutes per connection, default 40 starts/reconnects per UTC day (`TRIALRUN_VOICE_DAILY_SESSIONS`). Default model: `gemini-3.1-flash-live-preview` (`TRIALRUN_GEMINI_MODEL`). With credentials, Chromium and ffmpeg/flite, `TRIALRUN_TEST_GEMINI=1 pytest tests/test_live_voice.py` exercises an actual spoken call and CRM changes in a temporary world.
+
+For turn-based profiles:
 
     firm-lab call call.start --json '{"mode":"human","profile_id":"intake-clerk"}'
     firm-lab call call.turn --json '{"id":"RUN_ID","sequence":0,"text":"I was cycling when a van hit me."}'

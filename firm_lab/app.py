@@ -2,7 +2,7 @@ import json
 import html
 from contextlib import asynccontextmanager
 from pathlib import Path
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, WebSocket
 from fastapi.responses import FileResponse, JSONResponse, HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from starlette.concurrency import run_in_threadpool
@@ -31,6 +31,11 @@ def create_app(data_root=None):
             await run_in_threadpool(lab.workers.shutdown)
     app=FastAPI(title="PI Firm Lab",version="0.1.0",docs_url=None,redoc_url=None,lifespan=lifespan,description="Independent simulated workplace. No external delivery. Operation registry: /api/operations.")
     app.state.store=store; app.state.lab=lab; app.state.demo_id=demo_id
+    from .live_voice import VoiceBridge
+    bridge=VoiceBridge(lab)
+    @app.websocket("/api/voice/{attempt}")
+    async def voice(socket:WebSocket,attempt:str):
+        await bridge.serve(socket,attempt)
     def auth(request):
         value=request.headers.get("authorization","")
         token=value[7:] if value.lower().startswith("bearer ") else request.cookies.get("firm_lab_token","")

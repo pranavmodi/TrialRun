@@ -5,7 +5,7 @@ Status: implementation acceptance contract. Date: 2026-11-10.
 ## Scope
 A standalone, persistent miniature PI firm and evaluation laboratory. Grow-inspired functionality, not a Clio product or certified emulator. No live vendor credentials, external email/SMS, existing-system imports, or shared databases. Local software must work without any AI-provider account.
 
-Release 1 implements text/API/browser workflows. Real-time telephone/browser audio, actual signatures, real message delivery, production multi-tenancy, and full Clio API compatibility are explicitly out of scope. Optional model integrations must not be claimed as verified without provider tests.
+Release 1 implements text/API/browser workflows, with optional realtime browser audio for simulated intake. PSTN calls, actual signatures, real message delivery, production multi-tenancy, and full Clio API compatibility are out of scope. Optional model integrations must not be claimed as verified without provider tests.
 
 Architecture adjustment: isolated SQLite databases per world replace the proposed shared PostgreSQL deployment for the self-contained release. A separate control database stores scenarios, runs, access grants, and evaluator results. Business state is persistent, versioned, and audited. Only the controller has reset/snapshot/fault authority.
 
@@ -98,3 +98,7 @@ available. Only caller-sourced spans are eligible for storage. Phone grading
 checks responsiveness, an evidenced lead and preservation of unrelated records;
 semantic accuracy and empathy require review. Provider failures stay visible and
 retryable. Hangup freezes the run; no outbound telephone or mail delivery occurs.
+
+Realtime is a separate human caller mode. One controller-authorized WebSocket per attempt carries 16 kHz caller PCM and 24 kHz Gemini speech, including interruption handling. Transcription, provider tool calls, outcomes, and simulated CRM edits belong exclusively to the attempt. Gemini may upsert one lead and create or reschedule one callback reminder attached to that lead. No arbitrary mutation, other-world selection, or external delivery tool is exposed. A disconnect releases the microphone and socket; reconnecting restores saved conversation context, not the audio stream. Frozen attempts cannot resume. Realtime grading checks a spoken exchange, completeness of the saved inquiry and workspace boundaries. It does not certify consent, the semantic accuracy of the extraction, or the appropriateness of the callback.
+
+Saving also requires the proposed name (whole words) and callback number (digits, ignoring punctuation) to appear in caller-side transcripts. The clerk's own speech is not evidence. If recognition missed information, the tool returns an error identifying which detail to ask for again; no lead or callback is created on that basis. The grader checks these fields against the frozen caller transcript. This cannot detect every transcription error.

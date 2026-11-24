@@ -30,7 +30,7 @@ SCHEMAS = {
  "staff": {"name": f("Name", required=True), "role": f("Role", "select", default="intake", options=["intake","attorney"]),
   "available": f("Available", "boolean", default=True),
   "available_from": f("Available from", "datetime"), "available_until": f("Available until", "datetime")},
- "tasks": {"matter_id": f("Matter", required=True, ref="matters"), "title": f("Task", required=True),
+ "tasks": {"matter_id": f("Matter", ref="matters"), "lead_id": f("Inquiry", ref="leads"), "title": f("Task", required=True),
   "assignee_id": f("Assignee", ref="staff"), "due_at": f("Due", "datetime", True),
   "kind": f("Kind", "select", default="callback", options=["callback","review","followup","conflict_check"]),
   "status": f("State", "select", default="open", options=["open","completed","cancelled"])},
@@ -88,6 +88,8 @@ def validate(c, entity, data, existing=None):
     if existing:
         result.update({k:v for k,v in existing.items() if k in schema})
     result.update(data)
+    if entity=="tasks" and bool(result.get("matter_id"))==bool(result.get("lead_id")):
+        raise LabError("A task needs exactly one matter or inquiry")
     for key, spec in schema.items():
         value = result.get(key)
         if spec.get("required") and (value is None or value == ""):

@@ -212,10 +212,16 @@ records. The desk never modifies the attempt. Escape closes a station; **Back to
 returns to the evaluator. A photo and the same station controls remain available
 if WebGL is unavailable. To rebuild the self-hosted renderer: `npm ci && npm run build:office`.
 
-### Choose local inference or OpenClaw
+### Answer the desk phone with Gemini Live
+
+In the office or [Evaluation Lab](/lab), select **Start call scenario → Me — realtime voice (Gemini Live) → Ring the office**, then allow microphone access. Speak normally; you can interrupt. No **Send turn** button is needed. **Minimize → Intake monitor** shows the inquiry as Gemini works; **Desk phone** brings back the call. An agreed callback is a task on this inquiry, not a real telephone call. **End call** freezes the transcript, actions, and score. Use fictional details: the browser streams audio through TrialRun to Google; TrialRun retains transcripts and CRM actions, not raw audio.
+
+Realtime appears only when configured. Use a server-side systemd credential named `gemini-live` (optional drop-in: `deploy/gemini-live.conf`) or `TRIALRUN_GEMINI_API_KEY` for local development. Never put the key in the browser, repository, or agent prompt. Install project dependencies and enable the WebSocket location in `deploy/trialrun.nginx`. See [API and CLI](API_CLI.md) for audio streaming, limits, and the opt-in browser test.
+
+### Choose local inference or OpenClaw for turn-based calls
 
 **Be the caller:** In the office or Evaluation Lab, choose **Start call scenario →
-Me — be the caller → Ring the office**. Type, or use your browser's microphone
+Me — type or dictate one turn → Ring the office**. Type, or use your browser's microphone
 dictation, check the words, and select **Send turn**. The clerk responds to the
 conversation using the selected inference profile's provider/model. Select **Enable
 sound** if necessary. **Minimize** to use the CRM; select the desk phone to return.

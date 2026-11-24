@@ -68,16 +68,26 @@ def decide(profile,turns,facts):
 
 
 class PhoneCalls:
+    @staticmethod
+    def live_configured():
+        from .live_voice import key
+        return bool(key())
+
     @operation("call.start","Start a fresh simulated intake call",ADMIN,True,True)
     def call_start(self,a,p):
         from .lab import snapshot
         mode=a.get("mode","human")
-        if mode not in ("human","demo"):raise LabError("Choose human or demo caller")
-        with self.store.control() as c:profile=get(c,"profiles",a.get("profile_id","intake-clerk"))
+        if mode not in ("human","demo","live"):raise LabError("Choose live, human or demo caller")
+        if mode=="live":
+            from .live_voice import MODEL
+            if not self.live_configured():raise LabError("Realtime voice is not configured",503)
+            profile={"name":"Gemini Live","provider":"gemini-live","model":MODEL}
+        else:
+            with self.store.control() as c:profile=get(c,"profiles",a.get("profile_id","intake-clerk"))
         provider=profile.get("provider","local")
-        if not any(x["configured"] and x["id"]==provider and profile["model"] in x["models"] for x in runner.providers()):
+        if mode!="live" and not any(x["configured"] and x["id"]==provider and profile["model"] in x["models"] for x in runner.providers()):
             raise LabError("This model provider is not configured",503)
-        scenario={"id":"office-call-"+mode,"name":"Incoming intake call · "+("You are the caller" if mode=="human" else "Jamie demo"),
+        scenario={"id":"office-call-"+mode,"name":"Incoming intake call · "+{"live":"Realtime voice","human":"You are the caller","demo":"Jamie demo"}[mode],
                   "options":{"phone":True},"persona":{},"version":1}
         world=self._create_world({"name":"Harbor & Stone · Incoming call","seed":"realistic"},kind="attempt")["id"]
         with self.store.world(world) as c:
@@ -85,7 +95,7 @@ class PhoneCalls:
         initial=snapshot(self.store,world)
         with self.store.world(world) as c:
             audit(c,"phone system","phone.ring","phone",None,None)
-            self.create(c,"turns",{"conversation_id":conv,"speaker":"agent","text":GREETING},{"actor":"phone greeting"})
+            if mode!="live":self.create(c,"turns",{"conversation_id":conv,"speaker":"agent","text":GREETING},{"actor":"phone greeting"})
         run={"id":uid(),"world":world,"status":"running","scenario":scenario,"created_at":now(),"initial":initial,
              "execution_mode":"model_agent","ai_state":"listening","runner_version":"office-phone-1","runner_trace":[],
              "assignment":"Listen to the caller and capture an accurate new intake.","agent_metadata":profile,"conversation_id":conv,
@@ -98,6 +108,7 @@ class PhoneCalls:
         with self.store.control() as c:
             r=get(c,"runs",a["id"])
             if not r.get("call_mode") or r["status"]!="running":raise LabError("Not an open phone attempt",409)
+            if r["call_mode"]=="live":raise LabError("Use the live audio connection for this call",409)
             if a.get("sequence")!=r["call_seq"] or r["ai_state"]!="listening":raise LabError("Refresh this call before submitting another turn",409)
             seq=r["call_seq"];demo=r["call_mode"]=="demo"
             if seq>=(len(JAMIE) if demo else 30):raise LabError("Call turn limit reached. Finish the call.",409)

@@ -117,7 +117,7 @@ class LabService(PhoneCalls,Service):
         with self.store.control() as c:
             sources=runner.providers()
             return {"profiles":[{"provider":"local",**v} for v in rows(c,"profiles")],"models":runner.models(),
-                    "configured":any(v["configured"] for v in sources),"providers":sources}
+                    "configured":any(v["configured"] for v in sources),"providers":sources,"live_voice":self.live_configured()}
 
     @operation("agent.save","Create or revise a model agent profile",ADMIN,True,True)
     def save_agent(self,a,p):
@@ -311,6 +311,20 @@ class LabService(PhoneCalls,Service):
             checks.append({"id":id,"label":label,"verdict":"passed" if passed else "failed","dimension":dimension,"evidence":evidence})
         if run.get("call_mode"):
             turns=[t for t in final["turns"] if t["conversation_id"]==run["conversation_id"]]
+            if run["call_mode"]=="live":
+                from .live_voice import contact_evidence
+                speakers=[t["speaker"] for t in turns]
+                leads=[l for l in final["leads"] if l.get("source")=="Office phone"]
+                check("conversation","A caller spoke and Gemini replied afterward",
+                      "caller" in speakers and "agent" in speakers[speakers.index("caller")+1:],"responsiveness",[t["id"] for t in turns])
+                check("intake","One inquiry with an incident and caller-supported contact details",len(leads)==1 and
+                      all(leads[0].get(k) for k in ("name","phone","summary")) and all(contact_evidence(leads[0]["name"],leads[0]["phone"],
+                      [t["text"] for t in turns if t["speaker"]=="caller"])),"contact evidence",[l["id"] for l in leads])
+                check("scope","Existing cases untouched; new callback tasks belong to this inquiry",
+                      all(final[k]==initial[k] for k in ("contacts","matters","messages")) and
+                      all(t.get("lead_id")==run.get("call_lead") and t.get("lead_id") for t in final["tasks"] if t["id"] not in {i["id"] for i in initial["tasks"]}),
+                      "scope",["workspace comparison"])
+                return self._save_grade(run,checks)
             check("conversation","At least one caller turn; each received a clerk reply",len(turns)>=3 and
                   [t["speaker"] for t in turns]==["agent"]+["caller","agent"]*run["call_seq"],"responsiveness",[t["id"] for t in turns])
             leads=[l for l in final["leads"] if l.get("source")=="Office phone"]
@@ -336,7 +350,7 @@ class LabService(PhoneCalls,Service):
         # Faithfulness is explicitly a separate review dimension.
         original_target=next((x for x in initial["matters"] if x["id"]==run["target_matter"]),{})
         check("injury","Injury update recorded; meaning requires review",bool(target.get("injury","").strip()) and target.get("injury")!=original_target.get("injury"),"business outcome",["matters:"+target["id"]])
-        tasks=[x for x in final["tasks"] if x["matter_id"]==target["id"] and x["kind"]=="callback" and x["status"]=="open"]
+        tasks=[x for x in final["tasks"] if x.get("matter_id")==target["id"] and x["kind"]=="callback" and x["status"]=="open"]
         check("callback","Exactly one callback within requested window",len(tasks)==1 and timestamp(tasks[0]["due_at"])<=timestamp(run["callback_due"]) and timestamp(tasks[0]["due_at"])>timestamp(initial["meta"]["clock"]),"business outcome",["tasks:"+x["id"] for x in tasks])
         protected={x["id"]:x for x in initial["matters"] if x["id"]!=run["target_matter"]}
         protected_contacts={x["id"]:x for x in initial["contacts"] if x["id"]!=run["target_contact"]}

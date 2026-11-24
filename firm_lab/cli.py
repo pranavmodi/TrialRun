@@ -14,6 +14,8 @@ def main():
     sub.add_parser("token",help="Print the local controller token for browser sign-in; do not share with agents")
     sub.add_parser("operations",help="List all role-permitted API/CLI operations")
     sub.add_parser("schema",help="Show field schema")
+    audio=sub.add_parser("voice",help="Stream raw 16 kHz mono s16le from stdin; receive 24 kHz s16le on stdout")
+    audio.add_argument("attempt")
     call=sub.add_parser("call"); call.add_argument("operation"); call.add_argument("--json",default="{}"); call.add_argument("--file"); call.add_argument("--key",help="Idempotency key")
     public=sub.add_parser("submit"); public.add_argument("--json",required=True); public.add_argument("--key")
     args=parser.parse_args()
@@ -30,6 +32,10 @@ def main():
             token=os.environ.get("FIRM_LAB_TOKEN") or Path(args.token_file).read_text().strip()
             headers["Authorization"]="Bearer "+token
         if getattr(args,"key",None): headers["Idempotency-Key"]=args.key
+        if args.command=="voice":
+            from .voice_cli import stream
+            import asyncio
+            asyncio.run(stream(args.url,args.attempt,headers));return
         with httpx.Client(base_url=args.url,headers=headers,timeout=120) as client:
             if args.command=="operations": response=client.get("/api/operations")
             elif args.command=="schema": response=client.get("/api/schema")
