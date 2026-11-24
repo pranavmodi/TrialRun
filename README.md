@@ -214,6 +214,8 @@ if WebGL is unavailable. To rebuild the self-hosted renderer: `npm ci && npm run
 
 ### Answer the desk phone with Gemini Live
 
+The office stays on screen through pickup. You can minimize the phone to inspect the CRM while the call continues. Opening and cancelling the call setup dialog does not disconnect the current call; starting a new attempt switches the desk to its separate records.
+
 In the office or [Evaluation Lab](/lab), select **Start call scenario → Me — realtime voice (Gemini Live) → Ring the office**, then listen for two rings and allow microphone access. The desk phone lights up before the voice agent answers. Speak normally; you can interrupt. No **Send turn** button is needed. **Minimize → Intake monitor** shows the inquiry as Gemini works; **Desk phone** brings back the call. An agreed callback is a task on this inquiry, not a real telephone call. **End call** freezes the transcript, actions, and score. Use fictional details: the browser streams audio through TrialRun to Google; TrialRun retains transcripts and CRM actions, not raw audio.
 
 Realtime appears only when configured. Use a server-side systemd credential named `gemini-live` (optional drop-in: `deploy/gemini-live.conf`) or `TRIALRUN_GEMINI_API_KEY` for local development. Never put the key in the browser, repository, or agent prompt. Install project dependencies and enable the WebSocket location in `deploy/trialrun.nginx`. See [API and CLI](API_CLI.md) for audio streaming, limits, and the opt-in browser test.

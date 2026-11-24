@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>PI Firm Lab · Workplace & evaluation</title><link rel="stylesheet" href="/static/style.css"><link rel="stylesheet" href="/static/studio.css"><script defer src="/static/help.js"></script></head>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>PI Firm Lab · Workplace & evaluation</title><link rel="stylesheet" href="/static/style.css"><link rel="stylesheet" href="/static/studio.css"><link rel="stylesheet" href="/static/firm-panels.css"><script defer src="/static/help.js"></script></head>
 <body>
 <div id="login" class="login-screen"><form id="login-form" class="login-card"><div class="brand-mark">T</div><p class="eyebrow">POSSIBLE MINDS / RESEARCH WORKSPACE</p><h1>A working firm.<br>A measurable agent.</h1><p>Sign in to your isolated PI firm environment. All cases and communications are simulated.</p><label>Lab access token<input id="token" type="password" required autocomplete="off" placeholder="Controller or world-scoped token"></label><button class="primary">Open workspace →</button><p class="hint">Local setup: run <code>firm-lab token</code> in the project directory. Evaluated agents should receive only a scoped world token.</p><p id="login-error" role="alert"></p></form></div>
 <div id="app" hidden>
@@ -8,6 +8,6 @@
 <main><div class="page-heading"><div><p class="eyebrow" id="section-kicker">FIRM OPERATIONS</p><h1 id="page-title">Overview</h1><p id="page-description"></p></div><div id="page-actions" class="actions"></div></div><div id="content"></div></main>
 <footer>PI Firm Lab · Grow-inspired workflows, not a Clio product · <a href="/docs" target="_blank">API reference</a></footer>
 </div></div>
-<dialog id="modal"><form id="modal-form"><header><div><p class="eyebrow">WORKSPACE ACTION</p><h2 id="modal-title"></h2></div><button type="button" id="close-modal" class="icon-button" aria-label="Close dialog">×</button></header><div id="modal-fields"></div><p id="modal-error" class="error" role="alert"></p><footer><button type="button" id="cancel-modal">Cancel</button><button type="submit" class="primary" id="modal-save">Save changes</button></footer></form></dialog>
+<dialog id="modal" class="firm-folio" aria-labelledby="modal-title"><form id="modal-form"><header><div><p class="folio-kicker">Harbor &amp; Stone · Practice workspace</p><h2 id="modal-title"></h2></div><button type="button" id="close-modal" class="icon-button" aria-label="Close dialog">×</button></header><div id="modal-fields"></div><p id="modal-error" class="error" role="alert"></p><footer><button type="button" id="cancel-modal">Cancel</button><button type="submit" class="primary" id="modal-save">Save changes</button></footer></form></dialog>
 <div id="toast" role="status" hidden></div>
 <script src="/static/app.js"></script></body></html>

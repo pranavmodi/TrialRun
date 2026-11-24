@@ -1,9 +1,9 @@
 /* The room is its own destination. Its viewport never inherits the lab grid. */
 .phone-console{position:absolute;z-index:2;top:clamp(88px,16vh,155px);right:clamp(10px,3vw,48px);width:min(400px,calc(100vw - 20px));max-height:61dvh;overflow:auto;background:#172e29f5;color:#f5ecda;border:1px solid #ab9774;border-radius:12px;padding:14px 17px;box-shadow:0 16px 45px #0d191d66}
-#office-desk[data-ringing=true] .phone-console{width:min(270px,calc(100vw - 20px));border-color:#f0b967}
+#office-desk[data-ringing=true] .phone-console{border-color:#b99455}
 #office-desk[data-phone-lit=true] .phone-state::before,#office-desk[data-phone-lit=true] [data-station=phone]::before{content:"";display:inline-block;width:.55em;height:.55em;margin-right:.45em;border-radius:50%;background:#ffcb70;box-shadow:0 0 9px #ffad38}
 #office-desk[data-phone-lit=true] .flat-photo [data-photo=phone]::after{content:"";position:absolute;left:72%;top:37%;width:8%;aspect-ratio:1;border-radius:50%;background:#fff0c1;box-shadow:0 0 4px 2px #ffc369,0 0 12px 5px #ff9a2480}
-@media(max-aspect-ratio:1/1){#office-desk.room-flat[data-ringing=true] .flat-photo{transform:translate(-34%,-50%)}}
+@media(max-aspect-ratio:1/1){#office-desk.room-flat[data-framing=phone] .flat-photo{transform:translate(-34%,-50%)}}
 .phone-console header,.phone-buttons{display:flex;align-items:center;justify-content:space-between;gap:6px;flex-wrap:wrap}.phone-console header strong{font:24px Georgia,serif}.phone-console button{font-size:13px;padding:6px 9px}.phone-console .phone-state,.phone-console small{color:#e0cb9f}.phone-console label,.phone-console .phone-error{color:#ffebc8}.phone-lines{max-height:18dvh;overflow:auto;padding:0;list-style:none}.phone-lines li{padding:7px 0;border-bottom:1px solid #ffffff28;font-size:14px}.phone-lines b{display:block;color:#e0c591}.phone-compose textarea{width:100%;min-height:52px;background:#fffdf6;color:#18352d}.phone-buttons{justify-content:flex-start;margin-top:7px}.phone-error:empty{display:none}
 @media(max-width:760px){.phone-console{top:65px;max-height:58dvh}}
 .office-mode #app>.lab-bar,.office-mode .lab-main>:not(#content){display:none}

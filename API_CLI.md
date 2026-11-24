@@ -164,6 +164,8 @@ UI equivalents: **Try scripted example** → `run.create` with `watch_mode: "scr
 
 Office phone from the CLI (same operations as the desk phone):
 
+The in-place phone display and shared dialogs do not change the API. The role-play form submits `actor.respond` with `id, text`; the expert review form submits `review.add` with `id, reviewer, verdict, reason`. Both are available through `firm-lab call`.
+
 For realtime, `agent.list.live_voice` indicates whether a key is configured (not a live health check). Start with `firm-lab call call.start --json '{"mode":"live"}'`. Use `firm-lab voice RUN_ID` to stream mono, signed 16-bit little-endian 16 kHz PCM on stdin and receive 24 kHz PCM on stdout. For example on Linux with PulseAudio:
 
     parec --raw --format=s16le --channels=1 --rate=16000 | firm-lab voice RUN_ID | pacat --raw --format=s16le --channels=1 --rate=24000

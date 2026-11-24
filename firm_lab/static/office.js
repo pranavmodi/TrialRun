@@ -38,7 +38,7 @@ const officeDesk=(()=>{
   }catch{fallback()}}
   function ring(active,lit){
     if(!mount)return;
-    if(active&&mount.dataset.ringing!=='true')view?.focus('phone');
+    if(active&&mount.dataset.ringing!=='true'){mount.dataset.framing='phone';view?.focus('phone')}
     mount.dataset.ringing=String(active);mount.dataset.phoneLit=String(lit);view?.ring(lit)
   }
   function postState(){
@@ -108,5 +108,13 @@ const officeDesk=(()=>{
     paint();(document.querySelector('#office-desk '+selector+':not(:disabled)')||document.querySelector('#office-desk [data-replay]')).focus({preventScroll:true});
   });
   document.addEventListener('keydown',e=>{if(e.key==='Escape'&&mount&&selection&&!computer)dismiss()});
-  return {ring,render(r){run=r;if(!mount)shell();paint()},leave(){officePhone.leave();clearTimeout(arrival);computer?.remove();computer=null;view?.destroy();view=null;mount=null;run=null;selection=null;cursor=null;leadCount=0;model=false;renderer=null}};
+  return {ring,render(r){
+    if(mount&&run?.id!==r.id){
+      officePhone.leave();clearTimeout(arrival);computer?.remove();computer=null;selection=null;cursor=null;leadCount=-1;
+      mount.querySelector('.room-exit').href=path(r.id);mount.querySelector('.desk-rail').hidden=true;
+      mount.querySelector('[data-replay]').setAttribute('aria-expanded','false');
+      document.title='Harbor & Stone · Attempt '+r.attempt_number+' · TrialRun';
+    }
+    run=r;if(!mount)shell();paint()
+  },leave(){officePhone.leave();clearTimeout(arrival);computer?.remove();computer=null;view?.destroy();view=null;mount=null;run=null;selection=null;cursor=null;leadCount=0;model=false;renderer=null}};
 })();

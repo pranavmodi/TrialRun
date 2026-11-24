@@ -1,0 +1,104 @@
+/* Shared materials for the firm's dialogs, desk instruments and record drawers. */
+:root {
+  --firm-pine:#19352f; --firm-pine-dark:#102922; --firm-paper:#faf7ef;
+  --firm-ink:#24372e; --firm-muted:#56635a; --firm-gilt:#c8ac73;
+  --firm-rule:#d9ceba; --firm-serif:Georgia,"Times New Roman",serif;
+  --firm-sans:system-ui,-apple-system,"Segoe UI",sans-serif;
+}
+.firm-folio,.phone-console,.room-inspector{font-family:var(--firm-sans);color:var(--firm-ink)}
+.folio-kicker,.firm-folio .folio-kicker{
+  margin:0;color:var(--firm-gilt);font:650 10px/1.45 var(--firm-sans);
+  letter-spacing:.14em;text-transform:uppercase
+}
+dialog.firm-folio{
+  box-sizing:border-box;width:min(36rem,calc(100vw - 28px));max-width:none;
+  max-height:calc(100dvh - 32px);overflow:auto;overscroll-behavior:contain;
+  padding:0;color:var(--firm-ink);background:var(--firm-paper);border:1px solid #b6a17b;
+  border-radius:12px;box-shadow:0 22px 80px #0b201c52
+}
+.firm-folio::backdrop,.office-computer::backdrop{background:#10231f99}
+.firm-folio header,#office-desk .phone-console header{
+  box-sizing:border-box;display:flex;align-items:center;justify-content:space-between;gap:16px;
+  background:linear-gradient(110deg,var(--firm-pine),var(--firm-pine-dark));
+  color:#fff8e7;border:0;border-bottom:2px solid var(--firm-gilt);
+  padding:19px clamp(16px,4vw,26px)
+}
+.firm-folio header{position:sticky;top:0;z-index:1}
+.firm-folio header h2,#office-desk .phone-console header strong{
+  display:block;margin:4px 0 0;color:#fff8e7;letter-spacing:-.025em;
+  font:normal clamp(23px,3.5vw,29px)/1.12 var(--firm-serif)
+}
+.firm-folio header .help-dot{color:#eaddbe;border-color:#a59a7a;background:transparent}
+.firm-folio button,#office-desk .phone-console button,.office-computer header button{
+  border:1px solid #b7b49f;border-radius:6px;background:var(--firm-paper);color:var(--firm-ink);
+  min-height:38px;padding:7px 13px;box-shadow:none;font:600 13px/1.35 var(--firm-sans);cursor:pointer
+}
+.firm-folio button:not(:disabled):hover,#office-desk .phone-console button:not(:disabled):hover{background:#ebe6d8;color:#162f27}
+.firm-folio button.primary,#office-desk .phone-console [data-phone=send],#office-desk .phone-console [data-phone=live]{
+  background:var(--firm-pine);border-color:var(--firm-pine);color:#fff9ea
+}
+.firm-folio button.primary:not(:disabled):hover,#office-desk .phone-console :is([data-phone=send],[data-phone=live]):not(:disabled):hover{background:#294d40;color:white}
+.firm-folio #close-modal,#office-desk .phone-console [data-phone=hide],#office-desk .office-computer header button{
+  flex:none;background:transparent;border:1px solid #a89f80;color:#fff8e7
+}
+.firm-folio #close-modal{width:38px;padding:0;font-size:22px}
+.firm-folio .help-dot{padding:0;min-height:0}
+.firm-folio [hidden],#office-desk [hidden]{display:none!important}
+.firm-folio #modal-fields{padding:20px clamp(16px,4vw,26px);max-height:none;overflow:visible}
+.firm-folio #modal-fields>p:first-child{margin-top:0}
+.firm-folio .folio-note{margin:16px 0 0;padding:12px 14px;border-left:2px solid var(--firm-gilt);background:#f1ecdf;font-size:13px}
+.firm-folio .folio-note strong{display:block;margin-bottom:3px;color:var(--firm-ink)}
+.firm-folio p:not(.folio-kicker):not([role=alert]){color:var(--firm-muted);line-height:1.55}
+.firm-folio label,#office-desk .phone-console label{color:var(--firm-ink);font:600 13px/1.45 var(--firm-sans)}
+.firm-folio :is(select,textarea,input):not([type=checkbox]),#office-desk .phone-compose textarea{
+  box-sizing:border-box;width:100%;max-width:100%;min-height:42px;margin-top:5px;
+  background:#fffdf7;color:var(--firm-ink);border:1px solid #aaa994;border-radius:5px;
+  padding:9px 11px;font:normal 15px/1.45 var(--firm-sans)
+}
+.firm-folio :focus-visible,#office-desk .phone-console :focus-visible{outline:3px solid #a9782b;outline-offset:2px}
+.firm-folio .form-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+.firm-folio :is(.folio-actions,footer){
+  display:flex;align-items:center;justify-content:flex-end;flex-wrap:wrap;gap:8px;
+  border:0;border-top:1px solid var(--firm-rule);background:transparent;padding:15px 0 0;margin-top:20px
+}
+.firm-folio footer{margin:0;padding:15px clamp(16px,4vw,26px);background:#f1ecdf}
+.firm-folio [role=alert]:empty{display:none}
+.firm-folio [role=alert],#office-desk .phone-error{color:#833d31}
+.firm-folio[data-intent=destructive] button.primary{color:#fff9ea;background:#813e32;border-color:#813e32}
+.firm-folio pre{white-space:pre-wrap;overflow-wrap:anywhere;max-width:100%;color:#263b30;background:#eeeadd;border:1px solid var(--firm-rule);padding:12px}
+.firm-folio button:disabled,#office-desk .phone-console button:disabled{opacity:.54;cursor:default}
+
+/* Reserve the same shell through ringing, permissions, pickup and subsequent speech.
+   Only the transcript region scrolls in normal use; tiny viewports can scroll the panel. */
+#office-desk .phone-console{
+  box-sizing:border-box;width:min(378px,calc(100vw - 24px));height:min(480px,61dvh);max-height:none;
+  display:flex;flex-direction:column;gap:0;padding:0;overflow:auto;overscroll-behavior:contain;
+  background:var(--firm-paper);color:var(--firm-ink);border:1px solid #b6a17b;border-radius:10px;
+  box-shadow:0 14px 42px #12251e55
+}
+#office-desk .phone-console>*{flex:none}
+#office-desk .phone-console header{padding:13px 16px;flex-wrap:nowrap}
+#office-desk .phone-console header>div{min-width:0}
+#office-desk .phone-console header strong{font-size:24px}
+.phone-brief{border-bottom:1px solid var(--firm-rule);padding:11px 16px;background:#f1ecdf;min-height:52px}
+#office-desk .phone-state{margin:0;color:var(--firm-pine);font:650 14px/1.45 var(--firm-sans)}
+#office-desk .phone-audio{display:block;color:var(--firm-muted);margin-top:3px;font:12px/1.45 var(--firm-sans)}
+#office-desk .phone-console .phone-record{flex:1 1 auto;min-height:48px;overflow:auto;overscroll-behavior:contain;padding:12px 16px}
+.phone-record .folio-kicker{color:#78663e}
+.phone-wait{font:italic 16px/1.5 var(--firm-serif);color:var(--firm-muted);margin:9px 0}
+#office-desk .phone-lines{overflow:visible;max-height:none;margin:2px 0 0;padding:0}
+#office-desk .phone-lines li{color:var(--firm-ink);border-bottom:1px solid var(--firm-rule);padding:8px 0;line-height:1.45}
+#office-desk .phone-lines b{color:var(--firm-muted);font:650 11px/1.5 var(--firm-sans);letter-spacing:.025em}
+.phone-compose{padding:8px 16px;border-top:1px solid var(--firm-rule)}
+#office-desk .phone-compose textarea{min-height:40px;margin:2px 0 0;resize:vertical}
+#office-desk .phone-console>.phone-buttons{padding:10px 16px;margin:0;border-top:1px solid var(--firm-rule);background:#f1ecdf}
+#office-desk .phone-console [data-phone=end]{margin-left:auto;color:#77362e;border-color:#b69a8e}
+.phone-error:not(:empty){margin:0;padding:6px 16px;background:#f6e9df}
+#office-desk .room-inspector{background:var(--firm-paper);border-color:#b6a17b;border-top:3px solid #b79b65}
+#office-desk .office-computer header{background:var(--firm-pine);border-bottom:2px solid var(--firm-gilt)}
+@media(max-width:600px){
+  .firm-folio .form-grid{grid-template-columns:minmax(0,1fr)}
+  .firm-folio :is(select,textarea,input):not([type=checkbox]),#office-desk .phone-compose textarea{font-size:16px}
+  #office-desk .phone-console{right:12px;top:96px;height:min(430px,calc(100dvh - 264px))}
+}
+@media(max-height:490px){#office-desk .phone-console{top:12px;height:calc(100dvh - 28px)}}

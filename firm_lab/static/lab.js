@@ -25,7 +25,7 @@ function agentControls(){
 }
 function editProfile(p){
   const sources=agents.providers.filter(x=>x.configured);
-  dialog(p?'Edit agent profile':'New agent profile','<form id="profile-form"><label>Name<input name="name" required maxlength="80" value="'+esc(p?.name)+'"></label><div class="form-grid"><label>Provider<select name="provider">'+sources.map(x=>'<option value="'+esc(x.id)+'" '+(p?.provider===x.id?'selected':'')+'>'+esc(x.label)+'</option>').join('')+'</select></label><label>Model or gateway agent<select name="model"></select></label></div><label>Standing instructions<textarea name="instructions" required maxlength="4000">'+esc(p?.instructions||'Work from the firm records. Verify the results of your actions.')+'</textarea></label><details><summary>Limits</summary><label>Maximum model turns<input name="max_turns" type="number" min="1" max="20" value="'+(p?.max_turns||8)+'"></label><label>Time limit (seconds)<input name="timeout_seconds" type="number" min="10" max="300" value="'+(p?.timeout_seconds||180)+'"></label></details><button class="primary">Save profile</button><p role="alert"></p></form>');
+  dialog(p?'Edit agent profile':'New agent profile','<form id="profile-form"><label>Name<input name="name" required maxlength="80" value="'+esc(p?.name)+'"></label><div class="form-grid"><label>Provider<select name="provider">'+sources.map(x=>'<option value="'+esc(x.id)+'" '+(p?.provider===x.id?'selected':'')+'>'+esc(x.label)+'</option>').join('')+'</select></label><label>Model or gateway agent<select name="model"></select></label></div><label>Standing instructions<textarea name="instructions" required maxlength="4000">'+esc(p?.instructions||'Work from the firm records. Verify the results of your actions.')+'</textarea></label><details><summary>Limits</summary><label>Maximum model turns<input name="max_turns" type="number" min="1" max="20" value="'+(p?.max_turns||8)+'"></label><label>Time limit (seconds)<input name="timeout_seconds" type="number" min="10" max="300" value="'+(p?.timeout_seconds||180)+'"></label></details><p role="alert"></p><div class="folio-actions"><button type="button" data-dismiss>Cancel</button><button class="primary">Save profile</button></div></form>');
   const provider=$('[name=provider]'),update=()=>{$('[name=model]').innerHTML=sources.find(x=>x.id===provider.value).models.map(m=>'<option '+(p?.model===m?'selected':'')+'>'+esc(m)+'</option>').join('')};
   provider.onchange=update;update();
   $('#profile-form').onsubmit=async e=>{e.preventDefault();const f=e.target,b=f.querySelector('button.primary');b.disabled=true;try{
@@ -87,17 +87,17 @@ function detail(r){
   }
   for(const d of document.querySelectorAll('details[data-key]'))if(opened.has(d.dataset.key))d.open=true;
 }
-async function route(){
+async function route({initial=null,keepOffice=false}={}){
   const g=++generation;clearTimeout(timer);current=null;last='';$('#toast').hidden=true;
   const id=location.pathname.match(/^\/lab\/attempts\/([^/]+)$/)?.[1];
   if(id&&location.hash==='#office-desk')history.replaceState(null,'',path(id)+'?view=office');
   const office=id&&new URLSearchParams(location.search).get('view')==='office';
   document.body.classList.toggle('office-mode',!!office);
-  officeDesk.leave();
-  if(!id)library();else $('#content').innerHTML='<a href="/lab">Back to evaluation lab</a><p>Loading attempt…</p>';
+  if(!(office&&keepOffice))officeDesk.leave();
+  if(!id)library();else if(!initial)$('#content').innerHTML='<a href="/lab">Back to evaluation lab</a><p>Loading attempt…</p>';
   async function poll(){
     try{
-      const r=id?await op('run.inspect',{id}):await op('run.list');
+      const r=initial||(id?await op('run.inspect',{id}):await op('run.list'));initial=null;
       if(g!==generation)return;
       const key=id?JSON.stringify([r.status,r.job_state,r.ai_state,r.runner_trace?.length,r.state.events.length,r.results.length,r.reviews.length,r.submission?.id]):JSON.stringify(r);
       if(key!==last){last=key;if(id){current=r;if(office)officeDesk.render(r);else detail(r)}else listing(r)}
@@ -126,13 +126,22 @@ async function start(el){
     if(a==='submit')await op('run.submit',{id});
     if(a==='script')await op('run.script',{id});
     if(a==='actor')await op('actor.respond',{id});
-    if(a==='roleplay'){const text=prompt('Caller message');if(!text)return;await op('actor.respond',{id,text})}
+    if(a==='roleplay'){attemptForm(id,'Human role-play','Speak as the caller. Your words will be added to this attempt’s conversation.',
+      '<label>Caller message<textarea name="text" rows="4" required></textarea></label>','Add caller message','actor.respond');return}
     if(a==='evaluate'){await op('run.finish',{id});await op('run.grade',{id})}
-    if(a==='review'){const reviewer=prompt('Reviewer name'),verdict=prompt('Verdict: pass, fail or uncertain'),reason=prompt('Reason');if(!reviewer||!verdict||!reason)return;await op('review.add',{id,reviewer,verdict,reason})}
+    if(a==='review'){attemptForm(id,'Expert review','Record your independent assessment. This does not change the automated score.',
+      '<div class="form-grid"><label>Reviewer name<input name="reviewer" required></label><label>Verdict<select name="verdict" required><option value="">Select a verdict</option><option value="pass">Pass</option><option value="fail">Fail</option><option value="uncertain">Uncertain</option></select></label></div><label>Reason<textarea name="reason" rows="4" required></textarea></label>','Save review','review.add');return}
     if(a==='export'){const data=await op('run.export',{id}),u=URL.createObjectURL(new Blob([JSON.stringify(data)],{type:'application/json'})),l=document.createElement('a');l.href=u;l.download='attempt-'+id+'.json';l.click();setTimeout(()=>URL.revokeObjectURL(u),1000);return}
     await route();
   }
 }
+function attemptForm(id,title,description,fields,submit,operation){
+  dialog(title,'<p>'+description+'</p><form id="attempt-form">'+fields+'<p role="alert"></p><div class="folio-actions"><button type="button" data-dismiss>Cancel</button><button class="primary">'+submit+'</button></div></form>');
+  const form=$('#attempt-form');form.onsubmit=async e=>{e.preventDefault();const button=form.querySelector('.primary');button.disabled=true;
+    try{await op(operation,{id,...Object.fromEntries(new FormData(form))});$('#modal').close();await route()}
+    catch(err){form.querySelector('[role=alert]').textContent=err.message}finally{button.disabled=false}}
+}
+$('#modal').addEventListener('click',e=>{if(e.target.closest('[data-dismiss]'))$('#modal').close()});
 document.addEventListener('click',e=>{const el=e.target.closest('[data-action]');if(el){el.disabled=true;start(el).catch(error).finally(()=>el.disabled=false)}});
 $('#close-modal').onclick=()=>$('#modal').close();
 window.addEventListener('popstate',()=>route().catch(error));

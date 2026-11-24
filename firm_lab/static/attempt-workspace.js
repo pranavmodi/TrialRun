@@ -46,10 +46,10 @@ function render(){
       return '<tr><td>'+link(tab,r)+'</td><td>'+esc(r.status||r.role||r.channel||'—')+'</td><td>'+(m?link('matters',m):'—')+'</td></tr>';
     }).join('')+'</tbody></table></div>':'<p class="empty">No '+esc(tab)+' in this attempt.</p>';
   }
-  $('#content').innerHTML=html;
+  if(html!==previousContent){$('#content').innerHTML=html;previousContent=html}
 }
 window.addEventListener('hashchange',render);
-let previous='';
+let previous='',previousContent=null;
 async function refresh(){
   let retry=true;
   try{
@@ -66,7 +66,7 @@ async function refresh(){
     if(version!==previous){render();previous=version}
   }catch(e){
     $('#mode').textContent=e.message;
-    if(!retry){attempt=null;$('#content').replaceChildren()}
+    if(!retry){attempt=null;previousContent=null;$('#content').replaceChildren()}
   }finally{if(retry)setTimeout(refresh,1500)}
 }
 // In the office, the parent already holds the authorized run.inspect result.

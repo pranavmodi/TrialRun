@@ -47,16 +47,17 @@ const officePhone=(()=>{
     speechSynthesis.speak(s)
   }
   function notice(msg){if(box)q('.phone-error').textContent=msg}
-  function openPanel(){minimized=false;if(box){box.hidden=false;q('textarea')?.focus()}}
+  function openPanel(){minimized=false;if(box){box.hidden=false;q('[data-phone=hide]')?.focus({preventScroll:true})}}
   function shell(){
     box=document.createElement('aside');box.className='phone-console';box.setAttribute('aria-label','Office call');
-    box.innerHTML='<header><strong>Office phone</strong><button data-phone="hide" title="Keep the call open while exploring the room">Minimize</button></header>'+
-      '<p class="phone-state" role="status"></p><ol class="phone-lines" aria-label="Call transcript"></ol>'+
+    box.innerHTML='<header class="folio-head"><div><span class="folio-kicker">Harbor &amp; Stone · Intake desk</span><strong>Office phone</strong></div><button type="button" data-phone="hide" title="Keep the call open while exploring the room">Minimize</button></header>'+
+      '<div class="phone-brief"><p class="phone-state" role="status"></p><small class="phone-audio"></small></div>'+
+      '<div class="phone-record"><span class="folio-kicker">Conversation</span><p class="phone-wait">Waiting for the clerk to answer.</p><ol class="phone-lines" aria-label="Call transcript"></ol></div>'+
       '<div class="phone-compose"><label>Your words<textarea maxlength="1500" rows="2" placeholder="Tell the clerk why you’re calling…"></textarea></label>'+
       '<div class="phone-buttons"><button data-phone="speak">Use microphone</button><button data-phone="send">Send turn</button></div></div>'+
       '<div class="phone-buttons"><button data-phone="demo">Next caller turn</button><button data-phone="auto">Play conversation</button>'+
       '<button data-phone="live">Connect microphone</button><button data-phone="retry">Retry reply</button><button data-phone="listen">Enable sound</button><button data-phone="end">End call</button></div>'+
-      '<small class="phone-audio"></small><p class="phone-error" role="alert"></p>';
+      '<p class="phone-error" role="alert"></p>';
     document.querySelector('#office-desk').append(box);
     if(!window.SpeechRecognition&&!window.webkitSpeechRecognition)q('.phone-audio').textContent='Dictation is unavailable in this browser. Type your turn below.';
     box.querySelector('textarea').oninput=()=>controls();
@@ -78,6 +79,8 @@ const officePhone=(()=>{
     q('.phone-state').textContent=!open?'Ended · transcript saved':({queued:'Clerk is queued…',working:'Clerk is thinking…',failed:'Reply failed',interrupted:'Reply interrupted'})[session.ai_state]||
       (rt?'Gemini Live · You are the caller':human?'Connected · You are the caller':session.call_seq>=4?'Demo complete · ready to end':'Connected · Jamie is the scripted caller');
     q('.phone-lines').hidden=q('.phone-audio').hidden=!!ring;
+    q('.phone-wait').hidden=!ring&&q('.phone-lines').childElementCount>0;
+    q('.phone-wait').textContent=ring?'The desk phone is ringing.':'Your conversation will appear here.';
     if(ring){
       q('.phone-state').textContent='Incoming call · Ring '+ring.number+' of 2';
       q('.phone-compose').hidden=true;
@@ -93,8 +96,13 @@ const officePhone=(()=>{
     if(ring&&(!atLive||r.status!=='running'))stopRing();
     if(!box)shell();box.hidden=minimized||!atLive;
     const turns=r.state.turns.filter(t=>t.conversation_id===r.conversation_id),list=q('.phone-lines');
-    if(list.childElementCount!==turns.length){
-      list.innerHTML=turns.map(t=>'<li><b>'+esc(t.speaker==='agent'?'Intake clerk':r.call_mode==='demo'?'Jamie':'You')+'</b> '+esc(t.text)+'</li>').join('');list.scrollTop=list.scrollHeight;
+    if(list.childElementCount<turns.length){
+      const pane=q('.phone-record'),follow=pane.scrollHeight-pane.scrollTop-pane.clientHeight<30;
+      for(const t of turns.slice(list.childElementCount)){
+        const line=document.createElement('li'),who=document.createElement('b');who.textContent=t.speaker==='agent'?'Intake clerk':r.call_mode==='demo'?'Jamie':'You';
+        line.append(who,' '+t.text);list.append(line)
+      }
+      if(follow)pane.scrollTop=pane.scrollHeight
     }
     if(first&&r.call_mode==="live")q(".phone-audio").textContent="Connect your microphone to speak with the realtime agent.";
     if(r.call_mode==="live"&&(!atLive||r.status!=="running")&&liveVoice.connected())liveVoice.stop();
@@ -129,7 +137,7 @@ const officePhone=(()=>{
     if(busy||((a==='send'||a==='demo')&&seqSent===r.call_seq))return;
     busy=true;controls();notice('');stopMic();
     try{
-      if(a==='end'){auto=false;clearTimeout(nextTimer);window.speechSynthesis?.cancel();await liveVoice.stop(true);await op('call.end',{id:r.id});await op('run.grade',{id:r.id});location.assign(path(r.id));return}
+      if(a==='end'){auto=false;clearTimeout(nextTimer);window.speechSynthesis?.cancel();await liveVoice.stop(true);await op('call.end',{id:r.id});await op('run.grade',{id:r.id});if(session?.id===r.id){history.pushState(null,'',path(r.id));await route()}return}
       if(a==='retry')await op('call.retry',{id:r.id});
       else if(a==='send'||a==='demo'){await op('call.turn',{id:r.id,sequence:r.call_seq,...(a==='send'?{text:q('textarea').value}:{})});
         if(session?.id!==r.id)return;seqSent=r.call_seq;if(a==='send')q('textarea').value=''}
@@ -138,15 +146,17 @@ const officePhone=(()=>{
   }
   document.addEventListener('click',e=>{if(!e.target.closest('[data-call-launch]'))return;
     const ps=agents.profiles.filter(p=>agents.providers.some(x=>x.id===p.provider&&x.configured&&x.models.includes(p.model)));
-    dialog('Start an incoming call','<p>Use fictional details. Each call gets a fresh office. Nothing is dialed or sent to a real firm.</p>'+
+    dialog('Start an incoming call','<p>Call the intake desk in an isolated test attempt. No real firm or client is contacted.</p>'+
       (ps.length||agents.live_voice?'<form id="call-setup"><label>Who is calling?<select name="mode">'+(agents.live_voice?'<option value="live">Me — realtime voice (Gemini Live)</option>':'')+(ps.length?'<option value="human">Me — type or dictate one turn</option><option value="demo">Jamie — scripted caller</option>':'')+'</select></label>'+
       '<label>Clerk model<select name="profile_id">'+ps.map(p=>'<option value="'+esc(p.id)+'">'+esc(p.name)+' · '+esc(p.model)+'</option>').join('')+'</select></label>'+
-      '<p>Realtime sends microphone audio to Google Gemini and plays its voice back. Other modes use typed or dictated turns. Use fictional details only. TrialRun saves transcripts and simulated actions, not microphone audio.</p>'+
-      '<button class="primary">Ring the office</button><p role="alert"></p></form>':'<p>Configure a model provider before starting a call.</p>'));
+      '<p class="folio-note"><strong>Fictional details only</strong><span data-call-note></span> TrialRun saves the transcript and simulated actions, not microphone audio.</p>'+
+      '<p role="alert"></p><div class="folio-actions"><button type="button" data-dismiss>Cancel</button><button class="primary">Ring the office</button></div></form>':'<p>Configure a model provider before starting a call.</p>'));
     const form=document.querySelector('#call-setup');if(!form)return;const mode=form.elements.mode,profile=form.elements.profile_id;
-    mode.onchange=()=>{profile.disabled=mode.value==='live';profile.closest('label').hidden=profile.disabled};mode.onchange();form.onsubmit=async ev=>{ev.preventDefault();const b=form.querySelector('button');if(b.disabled)return;b.disabled=true;
-      try{unlockSound();const out=await op('call.start',Object.fromEntries(new FormData(form)));$('#modal').close();history.pushState(null,'',path(out.id)+'?view=office');
-        await route();if(session?.id===out.id)ringThenAnswer(session)}
+    mode.onchange=()=>{profile.disabled=mode.value==='live';profile.closest('label').hidden=profile.disabled;form.querySelector('[data-call-note]').textContent=mode.value==='live'?'Your microphone audio goes to Google Gemini for a live conversation.':mode.value==='demo'?'Jamie plays the caller. The selected model answers as the intake clerk.':'Type each turn, or dictate using your browser’s speech service.'};mode.onchange();form.onsubmit=async ev=>{ev.preventDefault();const b=form.querySelector('.primary');if(b.disabled)return;b.disabled=true;
+      try{unlockSound();const out=await op('call.start',Object.fromEntries(new FormData(form)));
+        const next=await op('run.inspect',{id:out.id});if(!form.isConnected||!$('#modal').open)return;
+        $('#modal').close();history.pushState(null,'',path(out.id)+'?view=office');
+        await route({initial:next,keepOffice:true});if(session?.id===out.id)ringThenAnswer(session)}
       catch(err){form.querySelector('[role=alert]').textContent=err.message;b.disabled=false}}
   });
   window.addEventListener('pagehide',()=>{stopRing();liveVoice.stop();stopMic();clearTimeout(nextTimer);window.speechSynthesis?.cancel()});
