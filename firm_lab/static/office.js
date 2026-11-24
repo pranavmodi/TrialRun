@@ -31,10 +31,16 @@ const officeDesk=(()=>{
       Object.entries(names).map(([k,n])=>'<button tabindex="-1" data-photo="'+k+'" title="'+n+'"></button>').join('')+'</div>')}
   function loadView(){view?.destroy();view=null;if(!renderer)return;try{
     view=(model?renderer.enter:renderer.enterTour)(mount.querySelector('.room-stage'),pick,fallback);view.count(leadCount);
-    if(selection)view.focus(selection);mount.dataset.renderer='webgl';mount.dataset.cameraMode=model?'model':'desk';
+    if(mount.dataset.ringing==='true'){view.focus('phone');view.ring(mount.dataset.phoneLit==='true')}
+    else if(selection)view.focus(selection);mount.dataset.renderer='webgl';mount.dataset.cameraMode=model?'model':'desk';
     mount.querySelector('[data-view]').textContent=model?'Desk view':'Room model';
     mount.querySelector('.room-guide').textContent=model?'Drag to orbit · Scroll or pinch to zoom':'Drag to look around · Click the monitor to enter';
   }catch{fallback()}}
+  function ring(active,lit){
+    if(!mount)return;
+    if(active&&mount.dataset.ringing!=='true')view?.focus('phone');
+    mount.dataset.ringing=String(active);mount.dataset.phoneLit=String(lit);view?.ring(lit)
+  }
   function postState(){
     const f=computer?.querySelector('iframe');if(!f?.contentWindow||!run)return;
     const ev=events(),s=state(ev,Math.min(cursor??ev.length,ev.length));
@@ -102,5 +108,5 @@ const officeDesk=(()=>{
     paint();(document.querySelector('#office-desk '+selector+':not(:disabled)')||document.querySelector('#office-desk [data-replay]')).focus({preventScroll:true});
   });
   document.addEventListener('keydown',e=>{if(e.key==='Escape'&&mount&&selection&&!computer)dismiss()});
-  return {render(r){run=r;if(!mount)shell();paint()},leave(){officePhone.leave();clearTimeout(arrival);computer?.remove();computer=null;view?.destroy();view=null;mount=null;run=null;selection=null;cursor=null;leadCount=0;model=false;renderer=null}};
+  return {ring,render(r){run=r;if(!mount)shell();paint()},leave(){officePhone.leave();clearTimeout(arrival);computer?.remove();computer=null;view?.destroy();view=null;mount=null;run=null;selection=null;cursor=null;leadCount=0;model=false;renderer=null}};
 })();

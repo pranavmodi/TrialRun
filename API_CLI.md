@@ -72,7 +72,7 @@ Every operation has CLI form: firm-lab call OPERATION --json 'ARGUMENTS'.
 | run.script | C | id | Convert the submitted inquiry using the scoped reference policy; scripted attempts only. Safe to retry. |
 | run.inspect | C | id | Read-only attempt number, state, business-record changes since setup, results and reviews; finished attempts use frozen evidence. |
 | actor.respond | C | id (run), text optional | Next scripted caller turn or human role-play |
-| call.start | C | mode: live, human (API default), or demo; profile_id for turn-based calls | Start a fresh office phone attempt. Live uses the server-configured Gemini model. |
+| call.start | C | mode: live, human (API default), or demo; profile_id for turn-based calls | Start a fresh office phone attempt. Live uses the server-configured Gemini model. The two rings and handset lamp are browser presentation only; API/CLI clients connect directly. |
 | call.turn | C | id, sequence, text (human only) | Append one caller turn and queue the real clerk. Use current call_seq, starting at 0. |
 | call.retry | C | id | Retry a failed/interrupted reply without duplicating caller speech. |
 | call.end | C | id | Hang up and freeze evidence; then run.grade. |

@@ -1,6 +1,7 @@
 // Seated, photographic viewpoint. Station coordinates are normalized positions
 // in the equirectangular master, not screen pixels; picks follow every camera.
 import * as T from 'three';
+import {callLamp} from './phone-light.js';
 const PI=Math.PI,rad=PI/180,clamp=T.MathUtils.clamp;
 // [left, top, right, bottom] measured on the source panorama.
 const stations={monitor:[.425,.439,.588,.61],phone:[.304,.548,.362,.66],folder:[.365,.698,.521,.828],pad:[.539,.704,.643,.823],tray:[.596,.538,.701,.668]};
@@ -26,6 +27,7 @@ export function enterTour(stage,onPick,onFailure){
   const U=u=>.25+u*.5,V=v=>.19+v*.62;
   const surface=new T.Mesh(patch(U(0),V(0),U(1),V(1),128,64,10),new T.MeshBasicMaterial({map:pano,side:T.DoubleSide}));
   scene.add(surface);
+  const lamp=callLamp(scene,point(U(.347),V(.594)).multiplyScalar(9.9),.47);
   const display=document.createElement('canvas');display.width=960;display.height=500;
   const screenTex=new T.CanvasTexture(display);screenTex.colorSpace=T.SRGBColorSpace;
   const screen=new T.Mesh(patch(U(.429),V(.445),U(.584),V(.603),12,6,9.94),new T.MeshBasicMaterial({map:screenTex,side:T.DoubleSide,transparent:true,opacity:.92}));
@@ -65,5 +67,5 @@ export function enterTour(stage,onPick,onFailure){
   canvas.onwheel=e=>{e.preventDefault();zoom(Math.exp(clamp(e.deltaY*(e.deltaMode===1?14:1),-220,220)*.0017))};
   canvas.onkeydown=e=>{switch(e.key){case 'ArrowLeft':move(yaw-10,pitch,fov);break;case 'ArrowRight':move(yaw+10,pitch,fov);break;case 'ArrowUp':move(yaw,pitch+8,fov);break;case 'ArrowDown':move(yaw,pitch-8,fov);break;case '+':case '=':zoom(.8);break;case '-':zoom(1.25);break;case 'Home':home();break;default:return}e.preventDefault()};
   canvas.addEventListener('webglcontextlost',e=>{e.preventDefault();if(!dead)onFailure()},{once:true});count(0);
-  return {home,focus,zoom,count,destroy(){dead=true;observer.disconnect();cancelAnimationFrame(raf);for(const o of [surface,screen]){o.geometry.dispose();o.material.dispose()}pano.dispose();screenTex.dispose();ren.dispose();ren.forceContextLoss();canvas.remove();hint.hidden=true}};
+  return {home,focus,zoom,count,ring(on){lamp.set(on);invalidate()},destroy(){dead=true;lamp.dispose();observer.disconnect();cancelAnimationFrame(raf);for(const o of [surface,screen]){o.geometry.dispose();o.material.dispose()}pano.dispose();screenTex.dispose();ren.dispose();ren.forceContextLoss();canvas.remove();hint.hidden=true}};
 }

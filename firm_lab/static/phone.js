@@ -4,13 +4,39 @@ const officePhone=(()=>{
   let minimized=false,armed=false,audio=null,auto=false,nextTimer=0;
   const q=s=>box?.querySelector(s);
   function stopMic(){if(rec){rec.onend=rec.onerror=rec.onresult=null;rec.abort();rec=null}}
-  function leave(){liveVoice.stop();clearTimeout(nextTimer);stopMic();window.speechSynthesis?.cancel();box?.remove();box=null;
+  function leave(){stopRing();liveVoice.stop();clearTimeout(nextTimer);stopMic();window.speechSynthesis?.cancel();box?.remove();box=null;
     session=null;heard=new Set();busy=false;seqSent=null;minimized=false;auto=false;armed=false}
-  function tone(){
-    try{audio??=new (window.AudioContext||window.webkitAudioContext)();audio.resume().catch(()=>{});
-      for(const dt of [0,.23]){const o=audio.createOscillator(),g=audio.createGain(),start=audio.currentTime+dt;
-        o.frequency.value=490;g.gain.setValueAtTime(.001,start);g.gain.exponentialRampToValueAtTime(.075,start+.02);
-        g.gain.exponentialRampToValueAtTime(.001,start+.18);o.connect(g);g.connect(audio.destination);o.start(start);o.stop(start+.19)}}catch{}
+  let ring=null;
+  function unlockSound(){
+    try{audio??=new (window.AudioContext||window.webkitAudioContext)();audio.resume().catch(()=>{})}catch{}
+  }
+  function pulse(r){
+    if(audio?.state!=='running')return;
+    const t=audio.currentTime,g=audio.createGain();r.gains.push(g);g.connect(audio.destination);
+    g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(.065,t+.03);
+    g.gain.setValueAtTime(.065,t+1.05);g.gain.linearRampToValueAtTime(0,t+1.12);
+    for(const hz of [440,480]){const o=audio.createOscillator();o.frequency.value=hz;o.connect(g);
+      o.start(t);o.stop(t+1.13);o.onended=()=>o.disconnect()}
+  }
+  function stopRing(){
+    if(!ring)return;clearTimeout(ring.timer);for(const g of ring.gains)g.disconnect();
+    ring=null;officeDesk.ring(false,false);controls()
+  }
+  function ringThenAnswer(r){
+    const seq=ring={number:1,gains:[],timer:0};
+    function beat(){
+      if(ring!==seq)return;
+      if(session?.id!==r.id||!live||session.status!=='running'){stopRing();return}
+      officeDesk.ring(true,true);controls();pulse(seq);
+      seq.timer=setTimeout(()=>{
+        if(seq.number===1){officeDesk.ring(true,matchMedia('(prefers-reduced-motion: reduce)').matches);
+          seq.timer=setTimeout(()=>{seq.number=2;beat()},1600);return}
+        stopRing();
+        if(r.call_mode==='live')action('live').catch(err=>notice(err.message));
+        else{armed=true;muted=false;const greeting=r.state.turns.find(t=>t.conversation_id===r.conversation_id&&t.speaker==='agent');if(greeting)say(greeting.text);controls()}
+      },1150)
+    }
+    beat()
   }
   function say(text,caller=false){
     if(!armed||muted||!window.speechSynthesis)return;
@@ -51,6 +77,12 @@ const officePhone=(()=>{
     q('[data-phone=end]').hidden=!open;q('[data-phone=listen]').textContent=armed&&!muted?'Mute sound':'Enable sound';
     q('.phone-state').textContent=!open?'Ended · transcript saved':({queued:'Clerk is queued…',working:'Clerk is thinking…',failed:'Reply failed',interrupted:'Reply interrupted'})[session.ai_state]||
       (rt?'Gemini Live · You are the caller':human?'Connected · You are the caller':session.call_seq>=4?'Demo complete · ready to end':'Connected · Jamie is the scripted caller');
+    q('.phone-lines').hidden=q('.phone-audio').hidden=!!ring;
+    if(ring){
+      q('.phone-state').textContent='Incoming call · Ring '+ring.number+' of 2';
+      q('.phone-compose').hidden=true;
+      for(const k of ['live','demo','auto','listen','retry'])q('[data-phone='+k+']').hidden=true
+    }
   }
   function scheduleDemo(){
     clearTimeout(nextTimer);if(!auto||!session||!live||session.ai_state!=='listening'||session.call_seq>=4||seqSent===session.call_seq||busy)return;
@@ -58,6 +90,7 @@ const officePhone=(()=>{
   }
   function render(r,atLive){
     if(!r.call_mode)return;const first=!session;session=r;live=atLive;
+    if(ring&&(!atLive||r.status!=='running'))stopRing();
     if(!box)shell();box.hidden=minimized||!atLive;
     const turns=r.state.turns.filter(t=>t.conversation_id===r.conversation_id),list=q('.phone-lines');
     if(list.childElementCount!==turns.length){
@@ -72,6 +105,8 @@ const officePhone=(()=>{
   }
   async function action(a){
     const r=session;if(!r)return;
+    if(ring&&!['hide','end'].includes(a))return;
+    if(a==='end')stopRing();
     if(a==='live'&&live&&r.status==='running'){
       const status=msg=>{if(session?.id===r.id){q('.phone-audio').textContent=msg;controls()}};
       if(liveVoice.connected()){await liveVoice.stop(true);status('Microphone disconnected. You can reconnect to this attempt.');return}
@@ -110,10 +145,10 @@ const officePhone=(()=>{
       '<button class="primary">Ring the office</button><p role="alert"></p></form>':'<p>Configure a model provider before starting a call.</p>'));
     const form=document.querySelector('#call-setup');if(!form)return;const mode=form.elements.mode,profile=form.elements.profile_id;
     mode.onchange=()=>{profile.disabled=mode.value==='live';profile.closest('label').hidden=profile.disabled};mode.onchange();form.onsubmit=async ev=>{ev.preventDefault();const b=form.querySelector('button');if(b.disabled)return;b.disabled=true;
-      try{tone();const out=await op('call.start',Object.fromEntries(new FormData(form)));$('#modal').close();history.pushState(null,'',path(out.id)+'?view=office');
-        await route();if(session?.id===out.id){if(session.call_mode==="live")await action("live");else{armed=true;muted=false;say(session.state.turns.at(-1).text)}controls()}}
+      try{unlockSound();const out=await op('call.start',Object.fromEntries(new FormData(form)));$('#modal').close();history.pushState(null,'',path(out.id)+'?view=office');
+        await route();if(session?.id===out.id)ringThenAnswer(session)}
       catch(err){form.querySelector('[role=alert]').textContent=err.message;b.disabled=false}}
   });
-  window.addEventListener('pagehide',()=>{liveVoice.stop();stopMic();clearTimeout(nextTimer);window.speechSynthesis?.cancel()});
+  window.addEventListener('pagehide',()=>{stopRing();liveVoice.stop();stopMic();clearTimeout(nextTimer);window.speechSynthesis?.cancel()});
   return {render,leave,openPanel};
 })();

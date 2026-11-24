@@ -1,5 +1,6 @@
 // Original procedural cutaway. All dimensions are in the same world space.
 import * as T from 'three';
+import {callLamp} from './phone-light.js';
 import {OrbitControls} from 'three/addons/controls/OrbitControls.js';
 import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
 export {enterTour} from './tour.js';
@@ -75,6 +76,7 @@ export function enter(stage,onPick,onFailure){
   box(monitor,'#394039',-.07,.026,.57,1.17,.046,.33);for(let row=0;row<3;row++)for(let j=0;j<14;j++)box(monitor,'#a9a896',-.59+j*.079,.054,.465+row*.091,.065,.012,.06);
   ball(monitor,'#4a514c',.69,.046,.58,.084,.05,.13);
   const phone=item('phone',-1.81,1.25,1);phone.rotation.y=.18;box(phone,ink,0,.09,0,.65,.16,.47);
+  const phoneLamp=callLamp(phone,v(.23,.18,.08),.13);
   for(const x of [-.23,.23])ball(phone,'#383c39',x,.22,-.11,.12,.096,.118);box(phone,'#313a37',0,.25,-.12,.45,.09,.13);
   for(let i=0;i<9;i++)box(phone,'#c7c1a7',(i%3-1)*.08,.178,.01+Math.floor(i/3)*.067,.054,.017,.04);
   const file=item('folder',.44,1.268,1.4);file.rotation.y=-.15;box(file,'#bd8c48',0,0,0,.76,.026,.51);box(file,paper,0,.023,0,.71,.027,.47);box(file,'#d5a75e',0,.052,-.01,.755,.02,.49);box(file,'#d5a75e',-.21,.051,-.27,.26,.018,.08);box(file,paper,-.08,.064,0,.34,.01,.1);
@@ -133,6 +135,6 @@ export function enter(stage,onPick,onFailure){
   canvas.onpointerleave=()=>{hint.hidden=true};
   canvas.onkeydown=e=>{if(e.key==='+'||e.key==='=')zoom(.8);else if(e.key==='-')zoom(1.25);else if(e.key==='Home')home();else if(['ArrowLeft','ArrowRight','ArrowUp','ArrowDown'].includes(e.key)){const s=new T.Spherical().setFromVector3(camera.position.clone().sub(orbit.target));if(e.key==='ArrowLeft')s.theta-=.16;if(e.key==='ArrowRight')s.theta+=.16;if(e.key==='ArrowUp')s.phi-=.12;if(e.key==='ArrowDown')s.phi+=.12;s.phi=T.MathUtils.clamp(s.phi,orbit.minPolarAngle,orbit.maxPolarAngle);move(new T.Vector3().setFromSpherical(s).add(orbit.target),orbit.target.clone())}else return;e.preventDefault()};
   canvas.addEventListener('webglcontextlost',e=>{e.preventDefault();if(!disposed)onFailure()},{once:true});
-  return {home,zoom,focus(id){if(!anchors[id])return;const t=v(...anchors[id]);move(t.clone().add(v(1.15,1.32,2.55).multiplyScalar(camera.aspect<1?1.35:1)),t)},count(n){display(n);invalidate()},
-    destroy(){disposed=true;observer.disconnect();orbit.dispose();cancelAnimationFrame(raf);batched.forEach(x=>x.dispose());geo.forEach(x=>x.dispose());mcache.forEach(x=>x.dispose());extras.forEach(x=>x.dispose());texs.forEach(x=>x.dispose());sun.shadow.dispose();ren.dispose();ren.forceContextLoss();canvas.remove();hint.hidden=true}};
+  return {home,zoom,ring(on){phoneLamp.set(on);invalidate()},focus(id){if(!anchors[id])return;const t=v(...anchors[id]);move(t.clone().add(v(1.15,1.32,2.55).multiplyScalar(camera.aspect<1?1.35:1)),t)},count(n){display(n);invalidate()},
+    destroy(){disposed=true;phoneLamp.dispose();observer.disconnect();orbit.dispose();cancelAnimationFrame(raf);batched.forEach(x=>x.dispose());geo.forEach(x=>x.dispose());mcache.forEach(x=>x.dispose());extras.forEach(x=>x.dispose());texs.forEach(x=>x.dispose());sun.shadow.dispose();ren.dispose();ren.forceContextLoss();canvas.remove();hint.hidden=true}};
 }
