@@ -1,6 +1,12 @@
 // One help control per section, including sections created after a live update.
 (() => {
 const tips={
+ 'the intake desk':'Choose an object to inspect this attempt. Replay steps through recorded events without changing the firm.',
+ 'intake monitor':'The CRM inbox lists incoming inquiries in this attempt.',
+ 'lawyer’s inbox':'The attorney’s review queue, including the reason, assigned attorney, and acceptance status. This is not email.',
+ 'desk phone':'Read the conversation recorded for this scenario. Web form submissions do not ring the phone.',
+ 'case folder':'Compare the source inquiry with the contact and matter records at this point in the attempt.',
+ 'callback pad':'Shows saved callback tasks, not promises inferred from a conversation.',
  'put an agent to work.':'TrialRun gives an agent a fictional job, records its actions, and checks the result.',
  'enter the lab':'Sign in as a lab operator to start tests, observe work, and grade attempts.',
  'attempt controls':'Advance only this attempt. You can inspect its workspace at any time. Grading freezes the records.',

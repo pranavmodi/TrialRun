@@ -206,6 +206,10 @@ To create a profile via CLI or HTTP, pass for example
 `{"name":"Gateway reviewer","provider":"openclaw","model":"openclaw/trialrun-clerk","instructions":"Work from the intake records and verify your changes."}`.
 Wait until the worker is stopped, failed or interrupted before freezing; export with run.export.
 
+The fictional office is a read-only view of `run.inspect` (same CLI and HTTP
+operation above). Its replay uses `state.events[timeline_start:]` and record
+before/after images. The lawyer's inbox projects `state.escalations`, not messages.
+
 
 `/lab/attempts/<run-id>/workspace` displays the controller-only `run.inspect`
 projection. Each lab attempt row links directly to this route. The same live or frozen records are available from

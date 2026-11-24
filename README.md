@@ -197,6 +197,13 @@ same data directory or interrupt an active evaluation for deployment.
 
 ### Choose local inference or OpenClaw
 
+Open any attempt to visit the fictional Harbor & Stone intake desk. Select the
+monitor for its CRM, the in-tray for attorney handoffs, the phone for conversation
+turns, the pad for callbacks, or the folder for case details. Previous/Next
+replays recorded events; Back to live (or Final state) returns to the latest
+records. The desk never modifies the attempt. On small screens its object
+controls are listed below the scene.
+
 In **Evaluation Lab → Model-backed agent**, choose **Intake Clerk · Local model**
 or **Gateway Clerk · OpenClaw gateway**. Click **Run with AI**, then **Submit
 Jamie’s website form**. Watch **Model turns** and **Workspace state**; finish

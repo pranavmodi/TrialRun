@@ -5,7 +5,7 @@ const pretty=x=>'<pre>'+esc(JSON.stringify(x,null,2))+'</pre>';
 const button=(name,action,id='',primary=false)=>'<button data-action="'+action+'" data-id="'+esc(id)+'" class="'+(primary?'primary':'')+'">'+esc(name)+'</button>';
 const path=id=>'/lab/attempts/'+encodeURIComponent(id);
 const workspaceLink=(id,label)=>'<a href="'+path(id)+'/workspace" target="_blank" rel="noopener">'+label+'</a>';
-const attemptLinks=id=>'<div class="attempt-links"><a href="'+path(id)+'">View attempt</a>'+workspaceLink(id,'View workspace')+'</div>';
+const attemptLinks=id=>'<div class="attempt-links"><a href="'+path(id)+'">View attempt</a><a href="'+path(id)+'#office-desk">Enter office</a>'+workspaceLink(id,'View workspace')+'</div>';
 let generation=0,timer,scenarios,agents,last='',current=null;
 async function api(url,data){
   const res=await fetch(url,data===undefined?{}:{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});
@@ -74,6 +74,8 @@ function detail(r){
   const form=r.visitor_form&&!r.submission?'<details><summary>Preview Jamie’s website form</summary>'+pretty(r.visitor_form)+'</details>':'';
   const score=res?'<section class="card grade"><p class="eyebrow">EVALUATION RESULT</p><h2>'+res.passed+' of '+res.total+' checks passed</h2><p>Requires independent PI expert review for qualitative performance.</p>'+res.checks.map(c=>'<details data-key="check-'+esc(c.id)+'"><summary>'+statusPill(c.verdict)+' '+esc(c.label)+'</summary>'+pretty(c.evidence)+'</details>').join('')+'</section>':'';
   $('#content').innerHTML='<a href="/lab">← Back to evaluation lab</a><section class="card run-controls"><p class="eyebrow">ATTEMPT CONTROLS</p>'+statusPill(status(r))+'<div class="actions">'+ctl.join('')+'</div>'+form+(r.error?'<p class="error">'+esc(r.error)+'</p>':'')+'</section><div class="scenario-grid">'+workspace(r)+activity(r)+'</div>'+score+r.reviews.map(v=>'<p>Expert review: '+esc(v.verdict+' · '+v.reviewer+' · '+v.reason)+'</p>').join('');
+  $('#content .run-controls').insertAdjacentHTML('afterend','<section id="office-desk" aria-label="Fictional intake office"></section>');
+  officeDesk.render(r);
   if(r.ai_state){
     const trace='<section class="card" id="runner"><p class="eyebrow">03 / DECISION LOG</p><h2>Model turns</h2><details data-key="profile"><summary>'+esc(r.agent_metadata.name)+' · v'+r.agent_metadata.version+' · '+esc(r.agent_metadata.model)+'</summary>'+pretty(r.agent_metadata)+'</details>'+
       (r.stop_reason?'<p>Stopped: '+esc(r.stop_reason)+'</p>':'')+(r.runner_trace||[]).map((e,i)=>{
@@ -94,7 +96,7 @@ async function route(){
       const r=id?await op('run.inspect',{id}):await op('run.list');
       if(g!==generation)return;
       const key=id?JSON.stringify([r.status,r.job_state,r.ai_state,r.runner_trace?.length,r.state.events.length,r.results.length,r.reviews.length,r.submission?.id]):JSON.stringify(r);
-      if(key!==last){last=key;if(id){current=r;detail(r)}else listing(r)}
+      if(key!==last){const entering=!last;last=key;if(id){current=r;detail(r);if(entering&&location.hash==='#office-desk')$('#office-desk').scrollIntoView()}else listing(r)}
       if(id&&r.status!=='running'&&(!r.job_state||!['queued','working'].includes(r.job_state))&&r.results.length)return;
     }catch(e){if(g===generation)error(e)}
     if(g===generation)timer=setTimeout(poll,1500);

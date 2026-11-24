@@ -76,3 +76,9 @@ but cannot execute native tools: the TrialRun worker alone validates and execute
 under the intake grant. Provider failure is visible and must not switch providers.
 The sign-in, library, run observer, firm workspaces, reference, and fictional website
 offer plain-language section help usable by pointer, keyboard, or touch.
+
+Each attempt includes a read-only illustrated firm desk. The CRM, callback pad,
+attorney handoff tray, conversation and case folder project the attempt's own
+records. Replay reverses recorded changes up to a selected event; it neither
+re-executes actions nor changes the score. Workspace links show latest/frozen
+records and are omitted during historical replay.
