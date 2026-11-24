@@ -9,6 +9,17 @@
 .room-top h1{margin:.12em 0 0;color:#fff4dc;font:400 clamp(30px,4.1vw,68px)/1.05 Georgia,serif;letter-spacing:-.055em;text-shadow:0 2px 20px #203328}
 .room-top .help-anchor{gap:.6rem}.room-top .help-dot{pointer-events:auto}
 .room-top>div{display:flex;flex-direction:column;align-items:flex-start}
+.room-stage::after{content:'';position:absolute;inset:0;pointer-events:none;background:linear-gradient(180deg,#0a1219a8,transparent 26%,transparent 77%,#0b151868)}
+#office-desk[data-camera-mode=model] .room-stage::after{display:none}
+#office-desk .room-camera [data-view]{width:auto;padding-inline:12px;font-size:13px}
+#office-desk dialog.office-computer{position:fixed;inset:0;box-sizing:border-box;width:100vw;height:100dvh;max-width:none;max-height:none;padding:0;margin:0;border:0;border-radius:0;background:#f7f5ee;color:#18332d;overflow:hidden}
+.office-computer[open]{display:flex;flex-direction:column;animation:office-arrive .24s ease-out}
+#office-desk .office-computer header{flex:none;display:flex;justify-content:space-between;align-items:center;gap:8px;padding:8px clamp(12px,3vw,42px);background:#172925;color:#ede7d6;font-size:14px}
+.office-computer header span{color:#d1b788;font:600 11px ui-monospace,monospace;letter-spacing:.12em}
+.office-computer header button{padding:6px 14px;color:#f5ead8;background:transparent;border:1px solid #8b9d8c;border-radius:5px}
+.office-computer iframe{flex:1;min-height:0;width:100%;border:0;background:#f5f3ec}
+@keyframes office-arrive{from{opacity:.35;transform:scale(.975)}to{opacity:1;transform:none}}
+@media(prefers-reduced-motion:reduce){.office-computer[open]{animation:none}}
 .room-overline,.room-status,.desk-rail small{font:600 11px/1.4 ui-monospace,monospace;letter-spacing:.14em}
 .room-overline,.room-status{color:#ddc499}.room-caption{color:#e1e2cd;font:italic 16px/1.7 Georgia,serif}
 #office-desk .room-exit,.room-camera button,.room-nav button,.desk-buttons button,.room-dismiss{border:1px solid var(--line);border-radius:6px;background:var(--glass);color:#f4e9d5;box-shadow:none;font:500 14px/1.3 system-ui,sans-serif;text-decoration:none}
@@ -24,7 +35,11 @@
 .room-inspector .room-overline{color:#716141}.desk-detail h2{font:400 30px/1.1 Georgia,serif;margin:.4em 0}.desk-detail p,.desk-detail li{font-size:15px;color:#374b42}.desk-detail ul{padding-left:20px}.desk-link{color:#254d3c;text-decoration:underline}.desk-detail audio{width:100%}
 .desk-compare{overflow:auto;margin:1em 0}.desk-compare :is(th,td){font-size:13px;text-transform:none;letter-spacing:normal;overflow-wrap:anywhere;padding:7px}
 .desk-rail{border-top:1px solid var(--line);justify-content:space-between;margin-top:10px;padding-top:10px}.desk-rail p{color:#f0ead9;font-size:14px;margin:.2em 0}.desk-buttons button:disabled{opacity:.45}
-.room-flat .room-stage{background:#2a3831 url('/static/office-dusk.webp') center/cover no-repeat}.room-flat .room-camera{display:none}
+.room-flat .room-camera{display:none}
+.flat-photo{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:max(100vw,200dvh);aspect-ratio:2;background:url('/static/office-panorama.webp') center/100% 100% no-repeat}
+.flat-photo button{position:absolute;border:0;padding:0;min-width:0;min-height:0;background:transparent}
+.flat-photo button:hover{background:#f1d79422;outline:1px solid #e5d7a79c}
+.flat-photo [data-photo=monitor]{left:42.5%;top:43.9%;width:16.3%;height:17.1%}.flat-photo [data-photo=phone]{left:30.4%;top:54.8%;width:5.8%;height:11.2%}.flat-photo [data-photo=tray]{left:59.6%;top:53.8%;width:10.5%;height:13%}.flat-photo [data-photo=folder]{left:36.5%;top:69.8%;width:15.6%;height:13%}.flat-photo [data-photo=pad]{left:53.9%;top:70.4%;width:10.4%;height:11.9%}
 @media(max-width:760px){.room-dock{bottom:max(10px,env(safe-area-inset-bottom));left:10px;right:10px;max-width:none;padding:10px}.room-nav{gap:4px}.room-nav button{flex:auto;padding:6px;min-height:40px}
 .room-camera{right:10px;top:113px;bottom:auto;gap:4px}.room-camera button{width:39px;height:39px}
 .room-inspector{left:10px;right:10px;width:auto;top:auto;bottom:136px;max-height:34%;padding:15px 18px}.room-top{inset:18px 14px auto}.room-top h1{font-size:32px}.room-guide{font-size:12px}.room-dock-head{gap:3px 8px}.room-exit{font-size:13px!important}.room-inspector:has(~.room-dock .desk-rail:not([hidden])){bottom:222px}

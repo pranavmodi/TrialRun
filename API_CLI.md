@@ -211,6 +211,9 @@ read-only view of `run.inspect` (same CLI and HTTP
 operation above). Its replay uses `state.events[timeline_start:]` and record
 before/after images. The lawyer's inbox projects `state.escalations`, not messages.
 Orbit, zoom, camera reset and station selection are presentation-only and make no business writes.
+The computer opens the existing attempt workspace with `?display=computer` inside
+the office, receiving only the same-origin parent's projected records for that
+attempt. The embedded CRM does not fetch a newer snapshot during replay.
 
 
 `/lab/attempts/<run-id>/workspace` displays the controller-only `run.inspect`

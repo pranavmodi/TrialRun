@@ -84,4 +84,8 @@ polls. The CRM, callback pad,
 attorney handoff tray, conversation and case folder project the attempt's own
 records. Replay reverses recorded changes up to a selected event; it neither
 re-executes actions nor changes the score. Workspace links show latest/frozen
-records and are omitted during historical replay.
+records and are omitted during historical replay. The default photographic desk
+is an interior camera with bounded pan/zoom; the separate 3D cutaway supports
+free orbit. Entering its monitor opens the full CRM in place. Its contents
+must come only from the parent attempt and selected replay frame. Leaving the
+computer returns to that office, never to the practice firm.

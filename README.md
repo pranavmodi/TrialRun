@@ -197,8 +197,12 @@ same data directory or interrupt an active evaluation for deployment.
 
 ### Enter the 3D law office
 
-Click **Enter office** on an attempt to open a full-window, three-dimensional
-cutaway of Harbor & Stone. Drag to orbit, wheel or pinch to zoom, or use the
+Click **Enter office** to sit at Harbor & Stone’s photographic intake desk.
+Click the computer itself to enter this attempt’s full read-only CRM, browse
+Jamie’s record and linked case, then choose **Back to office**. During replay
+the computer shows the selected event, not today’s inbox. Drag to look around
+the desk or choose **Room model** for a free orbit around the 3D cutaway.
+Wheel or pinch to zoom, or use the
 zoom and reset buttons. With the canvas focused, use the arrow keys, +/− and Home.
 Select a desk object directly or use its station button to move closer. Select the
 monitor for its CRM, the in-tray for attorney handoffs, the phone for conversation

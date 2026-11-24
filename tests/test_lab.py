@@ -169,6 +169,10 @@ def test_public_input_constraints_and_cross_origin(env):
     assert client.post("/api/public/intakes",json={"world":"other"}).status_code==400
     assert client.post("/api/login",json={"token":app.state.store.controller},headers={"Origin":"https://evil.example"}).status_code==403
     assert "frame-ancestors 'none'" in client.get("/").headers["content-security-policy"]
+    for path, expected in [("/lab?display=computer","none"),
+                           ("/lab/attempts/test/workspace","none"),
+                           ("/lab/attempts/test/workspace?display=computer","self")]:
+        assert f"frame-ancestors '{expected}'" in client.get(path).headers["content-security-policy"]
 
 def test_message_delivery_consent_failure_retry_and_immutability(env):
     d=state(env); matter=d["matters"][0]

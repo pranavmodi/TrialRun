@@ -2,6 +2,7 @@
 import * as T from 'three';
 import {OrbitControls} from 'three/addons/controls/OrbitControls.js';
 import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
+export {enterTour} from './tour.js';
 const v=(x,y,z)=>new T.Vector3(x,y,z);
 const anchors={monitor:[-.32,1.87,.35],phone:[-1.87,1.33,1],folder:[.34,1.25,1.3],pad:[1.55,1.25,1.4],tray:[1.65,1.42,.27]};
 const labels={monitor:'Intake monitor',phone:'Desk phone',folder:'Case folder',pad:'Callback pad',tray:'Lawyer’s inbox'};
@@ -111,6 +112,16 @@ export function enter(stage,onPick,onFailure){
   function home(instant=false){const aspect=camera.aspect;let d=Math.min(46,Math.max(14.4,17.4/aspect));const target=v(0,1,0);move(v(.55,.49,.79).normalize().multiplyScalar(d).add(target),target,instant)}
   let lastShape=0;const resize=()=>{const {width:w,height:h}=stage.getBoundingClientRect();if(!w||!h)return;camera.aspect=w/h;camera.updateProjectionMatrix();ren.setSize(w,h,false);if(!lastShape||Math.abs(Math.log(camera.aspect/lastShape))>.45)home(true);lastShape=camera.aspect;invalidate()};
   const observer=new ResizeObserver(resize);observer.observe(stage);resize();display(0);
+  // Real surface variation on the orbital model, even at a station close-up.
+  for(const [name,surfaces,bump] of [
+    ['walnut',[walnut,oak,edge,...planks],.013],['leather',['#374c45'],.008],
+    ['plaster',['#6b8477'],.016],['linen',['#a7a98a','#bd825e','#d0bf97'],.012]
+  ]){
+    const tex=new T.TextureLoader().load('/static/office-'+name+'.webp',()=>{if(disposed)return;
+      for(const color of surfaces){const m=mat(color);m.map=tex;m.bumpMap=tex;m.bumpScale=bump;
+        if(name==='walnut'||name==='leather')m.color.set(name==='leather'?'#dedbd0':color===edge?'#a3998c':'#f2e0ca');m.needsUpdate=true}invalidate()});
+    tex.colorSpace=T.SRGBColorSpace;tex.anisotropy=Math.min(4,ren.capabilities.getMaxAnisotropy());texs.push(tex);
+  }
   orbit.addEventListener('change',invalidate);orbit.addEventListener('start',()=>{flight=null});
   function zoom(k){let delta=camera.position.clone().sub(orbit.target);delta.setLength(T.MathUtils.clamp(delta.length()*k,orbit.minDistance,orbit.maxDistance));move(orbit.target.clone().add(delta),orbit.target.clone())}
   const ray=new T.Raycaster();function hit(e){const rect=canvas.getBoundingClientRect();ray.setFromCamera(new T.Vector2((e.clientX-rect.left)/rect.width*2-1,1-(e.clientY-rect.top)/rect.height*2),camera);
@@ -121,7 +132,7 @@ export function enter(stage,onPick,onFailure){
   const hint=stage.querySelector('.room-hover');canvas.onpointermove=e=>{const id=!e.buttons&&e.pointerType==='mouse'&&hit(e);canvas.style.cursor=id?'pointer':e.buttons?'grabbing':'grab';hint.hidden=!id;if(id){hint.textContent=labels[id];hint.style.left=Math.min(stage.clientWidth-158,e.offsetX+16)+'px';hint.style.top=Math.max(8,e.offsetY-35)+'px'}};
   canvas.onpointerleave=()=>{hint.hidden=true};
   canvas.onkeydown=e=>{if(e.key==='+'||e.key==='=')zoom(.8);else if(e.key==='-')zoom(1.25);else if(e.key==='Home')home();else if(['ArrowLeft','ArrowRight','ArrowUp','ArrowDown'].includes(e.key)){const s=new T.Spherical().setFromVector3(camera.position.clone().sub(orbit.target));if(e.key==='ArrowLeft')s.theta-=.16;if(e.key==='ArrowRight')s.theta+=.16;if(e.key==='ArrowUp')s.phi-=.12;if(e.key==='ArrowDown')s.phi+=.12;s.phi=T.MathUtils.clamp(s.phi,orbit.minPolarAngle,orbit.maxPolarAngle);move(new T.Vector3().setFromSpherical(s).add(orbit.target),orbit.target.clone())}else return;e.preventDefault()};
-  canvas.addEventListener('webglcontextlost',e=>{e.preventDefault();onFailure()},{once:true});
+  canvas.addEventListener('webglcontextlost',e=>{e.preventDefault();if(!disposed)onFailure()},{once:true});
   return {home,zoom,focus(id){if(!anchors[id])return;const t=v(...anchors[id]);move(t.clone().add(v(1.15,1.32,2.55).multiplyScalar(camera.aspect<1?1.35:1)),t)},count(n){display(n);invalidate()},
-    destroy(){disposed=true;observer.disconnect();orbit.dispose();cancelAnimationFrame(raf);batched.forEach(x=>x.dispose());geo.forEach(x=>x.dispose());mcache.forEach(x=>x.dispose());extras.forEach(x=>x.dispose());texs.forEach(x=>x.dispose());sun.shadow.dispose();ren.dispose();canvas.remove()}};
+    destroy(){disposed=true;observer.disconnect();orbit.dispose();cancelAnimationFrame(raf);batched.forEach(x=>x.dispose());geo.forEach(x=>x.dispose());mcache.forEach(x=>x.dispose());extras.forEach(x=>x.dispose());texs.forEach(x=>x.dispose());sun.shadow.dispose();ren.dispose();ren.forceContextLoss();canvas.remove();hint.hidden=true}};
 }

@@ -47,7 +47,12 @@ def create_app(data_root=None):
         response=await call_next(request)
         response.headers["X-Content-Type-Options"]="nosniff"
         response.headers["Referrer-Policy"]="no-referrer"
-        response.headers["Content-Security-Policy"]="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; media-src 'self' data:; object-src 'none'; base-uri 'self'; frame-ancestors 'none'"
+        # Only the read-only monitor application may appear in the same-origin office.
+        embedded = (request.method=="GET" and response.status_code==200
+                    and getattr(request.scope.get("route"),"name",None)=="attempt_workspace"
+                    and request.query_params.get("display")=="computer")
+        ancestor="'self'" if embedded else "'none'"
+        response.headers["Content-Security-Policy"]=f"default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; media-src 'self' data:; object-src 'none'; base-uri 'self'; frame-ancestors {ancestor}"
         response.headers["Cache-Control"]="no-store"
         return response
 

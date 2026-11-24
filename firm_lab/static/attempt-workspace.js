@@ -69,4 +69,16 @@ async function refresh(){
     if(!retry){attempt=null;$('#content').replaceChildren()}
   }finally{if(retry)setTimeout(refresh,1500)}
 }
-refresh();
+// In the office, the parent already holds the authorized run.inspect result.
+// Accept just its selected evidence frame; never poll past a historical cursor.
+if(new URLSearchParams(location.search).get('display')==='computer'&&parent!==window){
+  const send=kind=>parent.postMessage({kind,id},location.origin);
+  $('#back').textContent='Back to office';$('#back').href='#';$('#back').onclick=e=>{e.preventDefault();send('office.crm.exit')};
+  document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!e.defaultPrevented){e.preventDefault();send('office.crm.exit')}});
+  window.addEventListener('message',e=>{const m=e.data;
+    if(e.origin!==location.origin||e.source!==parent||m?.kind!=='office.crm.state'||m.id!==id||!m.state)return;
+    attempt={state:m.state};$('#attempt').textContent='Attempt '+m.number+' · Read-only';$('#scenario').textContent=m.scenario;$('#mode').textContent=m.mode;
+    const version=JSON.stringify(m.state);if(version!==previous){render();previous=version}
+  });
+  send('office.crm.ready');
+}else refresh();
