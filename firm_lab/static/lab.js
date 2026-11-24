@@ -5,7 +5,8 @@ const pretty=x=>'<pre>'+esc(JSON.stringify(x,null,2))+'</pre>';
 const button=(name,action,id='',primary=false)=>'<button data-action="'+action+'" data-id="'+esc(id)+'" class="'+(primary?'primary':'')+'">'+esc(name)+'</button>';
 const path=id=>'/lab/attempts/'+encodeURIComponent(id);
 const workspaceLink=(id,label)=>'<a href="'+path(id)+'/workspace" target="_blank" rel="noopener">'+label+'</a>';
-const attemptLinks=id=>'<div class="attempt-links"><a href="'+path(id)+'">View attempt</a><a href="'+path(id)+'#office-desk">Enter office</a>'+workspaceLink(id,'View workspace')+'</div>';
+const officeLink=id=>'<a href="'+path(id)+'?view=office">Enter office</a>';
+const attemptLinks=id=>'<div class="attempt-links"><a href="'+path(id)+'">View attempt</a>'+officeLink(id)+workspaceLink(id,'View workspace')+'</div>';
 let generation=0,timer,scenarios,agents,last='',current=null;
 async function api(url,data){
   const res=await fetch(url,data===undefined?{}:{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});
@@ -65,7 +66,7 @@ function detail(r){
   const script=r.execution_mode==='reference_fixture',open=r.status==='running'&&!r.job_state,res=r.results.at(-1);
   $('#section-kicker').textContent=r.ai_state?'MODEL-BACKED AI ATTEMPT':script?'SCRIPTED EXAMPLE · NOT AN AI EVALUATION':'EXTERNAL AGENT TEST';
   $('#page-title').textContent=r.scenario.name+' · Attempt '+r.attempt_number;$('#description').textContent=r.assignment;
-  const ctl=['<a class="badge" href="'+path(r.id)+'/workspace" target="_blank" rel="noopener">View attempt workspace ↗</a>'];
+  const ctl=[officeLink(r.id),'<a class="badge" href="'+path(r.id)+'/workspace" target="_blank" rel="noopener">View attempt workspace ↗</a>'];
   if(open&&r.watch_mode&&!r.submission)ctl.push(button('Submit Jamie’s website form','submit',r.id,true));
   if(open&&r.watch_mode==='scripted'&&r.submission&&r.state.leads.find(x=>x.id===r.submission.id)?.status==='new')ctl.push(button('Run scripted conversion','script',r.id,true));
   if(open&&r.conversation_id)ctl.push(button('Caller speaks','actor',r.id),button('Human role-play','roleplay',r.id));
@@ -74,8 +75,6 @@ function detail(r){
   const form=r.visitor_form&&!r.submission?'<details><summary>Preview Jamie’s website form</summary>'+pretty(r.visitor_form)+'</details>':'';
   const score=res?'<section class="card grade"><p class="eyebrow">EVALUATION RESULT</p><h2>'+res.passed+' of '+res.total+' checks passed</h2><p>Requires independent PI expert review for qualitative performance.</p>'+res.checks.map(c=>'<details data-key="check-'+esc(c.id)+'"><summary>'+statusPill(c.verdict)+' '+esc(c.label)+'</summary>'+pretty(c.evidence)+'</details>').join('')+'</section>':'';
   $('#content').innerHTML='<a href="/lab">← Back to evaluation lab</a><section class="card run-controls"><p class="eyebrow">ATTEMPT CONTROLS</p>'+statusPill(status(r))+'<div class="actions">'+ctl.join('')+'</div>'+form+(r.error?'<p class="error">'+esc(r.error)+'</p>':'')+'</section><div class="scenario-grid">'+workspace(r)+activity(r)+'</div>'+score+r.reviews.map(v=>'<p>Expert review: '+esc(v.verdict+' · '+v.reviewer+' · '+v.reason)+'</p>').join('');
-  $('#content .run-controls').insertAdjacentHTML('afterend','<section id="office-desk" aria-label="Fictional intake office"></section>');
-  officeDesk.render(r);
   if(r.ai_state){
     const trace='<section class="card" id="runner"><p class="eyebrow">03 / DECISION LOG</p><h2>Model turns</h2><details data-key="profile"><summary>'+esc(r.agent_metadata.name)+' · v'+r.agent_metadata.version+' · '+esc(r.agent_metadata.model)+'</summary>'+pretty(r.agent_metadata)+'</details>'+
       (r.stop_reason?'<p>Stopped: '+esc(r.stop_reason)+'</p>':'')+(r.runner_trace||[]).map((e,i)=>{
@@ -90,13 +89,17 @@ function detail(r){
 async function route(){
   const g=++generation;clearTimeout(timer);current=null;last='';$('#toast').hidden=true;
   const id=location.pathname.match(/^\/lab\/attempts\/([^/]+)$/)?.[1];
+  if(id&&location.hash==='#office-desk')history.replaceState(null,'',path(id)+'?view=office');
+  const office=id&&new URLSearchParams(location.search).get('view')==='office';
+  document.body.classList.toggle('office-mode',!!office);
+  officeDesk.leave();
   if(!id)library();else $('#content').innerHTML='<a href="/lab">Back to evaluation lab</a><p>Loading attempt…</p>';
   async function poll(){
     try{
       const r=id?await op('run.inspect',{id}):await op('run.list');
       if(g!==generation)return;
       const key=id?JSON.stringify([r.status,r.job_state,r.ai_state,r.runner_trace?.length,r.state.events.length,r.results.length,r.reviews.length,r.submission?.id]):JSON.stringify(r);
-      if(key!==last){const entering=!last;last=key;if(id){current=r;detail(r);if(entering&&location.hash==='#office-desk')$('#office-desk').scrollIntoView()}else listing(r)}
+      if(key!==last){last=key;if(id){current=r;if(office)officeDesk.render(r);else detail(r)}else listing(r)}
       if(id&&r.status!=='running'&&(!r.job_state||!['queued','working'].includes(r.job_state))&&r.results.length)return;
     }catch(e){if(g===generation)error(e)}
     if(g===generation)timer=setTimeout(poll,1500);

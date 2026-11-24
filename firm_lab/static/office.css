@@ -1,13 +1,33 @@
-#office-desk{background:#112d2d;color:#f8f3e3;border-radius:16px;overflow:hidden;margin:18px 0;box-shadow:0 6px 25px #102d351c}
-.desk-head,.desk-rail{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:16px clamp(15px,3vw,32px)}
-.desk-head h2{font:normal clamp(26px,3vw,38px)/1.12 Georgia,serif;margin:4px 0 0}.desk-head small,.desk-rail small,.desk-display small{font:600 11px/1.4 ui-monospace,monospace;letter-spacing:.13em;color:#cbddc8}
-.desk-head>span{font-size:13px;border:1px solid #5d7b71;border-radius:30px;padding:5px 12px;white-space:nowrap}
-.desk-room{position:relative;aspect-ratio:2/1;background:#302f27 url('/static/office-dusk.webp') center/100% 100% no-repeat;container-type:inline-size}
-.desk-display{position:absolute;left:34%;top:23%;width:30%;height:31%;padding:2.2%;display:grid;align-content:center;gap:.35em;color:#daf6d1;pointer-events:none}
-.desk-display b{font:500 clamp(15px,3.2cqw,40px)/1 Georgia,serif}.desk-display span{font-size:clamp(12px,1.6cqw,20px)}.desk-display small{font-size:clamp(8px,.85cqw,12px)}
-.desk-point{position:absolute;transform:translate(-50%,-50%);border-radius:30px;background:#112924ee;color:#fff;border:1px solid #f3efccaa;box-shadow:0 3px 12px #0007;padding:7px 13px;min-height:35px;font-size:14px}.desk-point:hover,.desk-point[aria-pressed=true]{background:#efe4b5;color:#23382f;border-color:#fff}.desk-point:focus-visible{outline:3px solid white;outline-offset:3px}
-.point-phone{left:13%;top:76%}.point-monitor{left:50%;top:54%}.point-folder{left:65%;top:87%}.point-pad{left:89%;top:82%}.point-tray{left:83%;top:63%}
-.desk-rail{background:#183737;color:#e1ece2}.desk-rail p{margin:2px 0;font-size:14px}.desk-buttons{display:flex;gap:5px;flex-wrap:wrap}.desk-buttons button{font-size:13px;padding:6px 10px}.desk-buttons button:disabled{opacity:.68;cursor:default}
-.desk-detail{background:#fffdf6;color:#20332e;padding:19px clamp(15px,3vw,32px)}.desk-detail h3{font:500 24px/1.2 Georgia,serif;margin:0}.desk-detail p,.desk-detail li{font-size:15px;margin:.5em 0}.desk-link{display:inline-block;margin-top:8px;text-decoration:underline}.desk-compare{overflow:auto;margin-top:12px}.desk-compare th,.desk-compare td{font-size:13px;letter-spacing:normal;text-transform:none;overflow-wrap:anywhere}
-@media(max-width:680px){.desk-room{aspect-ratio:auto;padding-top:50%;background-size:100% auto;background-position:center top;background-color:#19322d}.desk-points{display:flex;flex-wrap:wrap;padding:8px;gap:6px}.desk-point{position:static;transform:none;min-height:44px}.desk-display{top:0;left:35%;height:auto;margin-top:11%;padding:2%}.desk-display small{display:none}.desk-rail{flex-direction:column;align-items:flex-start}.desk-head{align-items:start}.desk-head>span{font-size:12px}.desk-buttons button{min-height:40px}}
-.desk-head>div>small{display:block}.desk-detail audio{display:block;max-width:100%;margin:8px 0}
+/* The room is its own destination. Its viewport never inherits the lab grid. */
+.office-mode #app>.lab-bar,.office-mode .lab-main>:not(#content){display:none}
+.office-mode .lab-main{max-width:none;margin:0;padding:0}
+#office-desk{position:fixed;inset:0;isolation:isolate;overflow:hidden;background:radial-gradient(ellipse at 45% 42%,#546659 0%,#384b40 36%,#20332e 68%,#132722 100%);color:#fbf2de;font:400 16px/1.45 system-ui,sans-serif;--line:#f2deaf55;--glass:#1a2b25ef}
+#office-desk [hidden]{display:none!important}
+.room-stage{position:absolute;inset:0;overflow:hidden}.room-stage canvas{display:block;width:100%;height:100%;touch-action:none;cursor:grab}.room-stage canvas:focus-visible{outline:2px solid #ebd09b;outline-offset:-4px}
+.room-hover{position:absolute;z-index:1;pointer-events:none;background:#102b23f0;border:1px solid var(--line);color:#fff8e6;padding:5px 10px;border-radius:3px;font-size:14px}
+.room-top{position:absolute;inset:clamp(18px,3vw,50px) clamp(18px,3.5vw,60px) auto;display:flex;justify-content:space-between;align-items:flex-start;gap:16px;pointer-events:none}
+.room-top h1{margin:.12em 0 0;color:#fff4dc;font:400 clamp(30px,4.1vw,68px)/1.05 Georgia,serif;letter-spacing:-.055em;text-shadow:0 2px 20px #203328}
+.room-top .help-anchor{gap:.6rem}.room-top .help-dot{pointer-events:auto}
+.room-top>div{display:flex;flex-direction:column;align-items:flex-start}
+.room-overline,.room-status,.desk-rail small{font:600 11px/1.4 ui-monospace,monospace;letter-spacing:.14em}
+.room-overline,.room-status{color:#ddc499}.room-caption{color:#e1e2cd;font:italic 16px/1.7 Georgia,serif}
+#office-desk .room-exit,.room-camera button,.room-nav button,.desk-buttons button,.room-dismiss{border:1px solid var(--line);border-radius:6px;background:var(--glass);color:#f4e9d5;box-shadow:none;font:500 14px/1.3 system-ui,sans-serif;text-decoration:none}
+#office-desk .room-exit{flex:none;white-space:nowrap;padding:10px 15px;pointer-events:auto}
+.room-camera{position:absolute;right:clamp(14px,3.5vw,60px);bottom:clamp(22px,4vw,56px);display:flex;gap:3px}.room-camera button{width:43px;height:43px;padding:0;font-size:21px}
+.room-dock{position:absolute;left:clamp(14px,3.5vw,60px);bottom:clamp(22px,4vw,56px);max-width:calc(100% - 210px);color:#ede4d0;background:var(--glass);border:1px solid var(--line);border-radius:10px;box-shadow:0 12px 35px #0b171a40;padding:12px 14px}
+.room-dock-head,.desk-rail,.desk-buttons,.room-nav{display:flex;align-items:center;gap:8px;flex-wrap:wrap}.room-dock-head{justify-content:space-between;margin-bottom:9px;gap:16px}.room-status{text-transform:uppercase;font-size:11px;letter-spacing:.08em}.room-guide{font-size:13px;color:#d3d5c8}
+.room-nav button,.desk-buttons button{padding:7px 11px;min-height:36px;background:transparent;border-color:#9eaa935e}.room-nav button[aria-pressed=true],.room-nav button[aria-expanded=true]{color:#20382c;background:#ecd4a5}
+#office-desk :is(button,a):focus-visible{outline:3px solid #dfad5c;outline-offset:2px}
+.room-nav button:hover,.room-camera button:hover,.desk-buttons button:not(:disabled):hover{color:#fff;border-color:#e0c89e}
+.room-inspector{position:absolute;right:clamp(15px,3.5vw,60px);top:20%;width:min(345px,35vw);max-height:56%;overflow:auto;overscroll-behavior:contain;border:1px solid #d9cdb0;border-radius:9px;background:#f7f0df;color:#24382e;padding:24px;box-shadow:0 18px 55px #0d211d55}
+.room-dismiss{position:absolute;right:8px;top:8px;width:31px;height:31px;padding:0;font-size:20px;z-index:1}
+.room-inspector .room-overline{color:#716141}.desk-detail h2{font:400 30px/1.1 Georgia,serif;margin:.4em 0}.desk-detail p,.desk-detail li{font-size:15px;color:#374b42}.desk-detail ul{padding-left:20px}.desk-link{color:#254d3c;text-decoration:underline}.desk-detail audio{width:100%}
+.desk-compare{overflow:auto;margin:1em 0}.desk-compare :is(th,td){font-size:13px;text-transform:none;letter-spacing:normal;overflow-wrap:anywhere;padding:7px}
+.desk-rail{border-top:1px solid var(--line);justify-content:space-between;margin-top:10px;padding-top:10px}.desk-rail p{color:#f0ead9;font-size:14px;margin:.2em 0}.desk-buttons button:disabled{opacity:.45}
+.room-flat .room-stage{background:#2a3831 url('/static/office-dusk.webp') center/cover no-repeat}.room-flat .room-camera{display:none}
+@media(max-width:760px){.room-dock{bottom:max(10px,env(safe-area-inset-bottom));left:10px;right:10px;max-width:none;padding:10px}.room-nav{gap:4px}.room-nav button{flex:auto;padding:6px;min-height:40px}
+.room-camera{right:10px;top:113px;bottom:auto;gap:4px}.room-camera button{width:39px;height:39px}
+.room-inspector{left:10px;right:10px;width:auto;top:auto;bottom:136px;max-height:34%;padding:15px 18px}.room-top{inset:18px 14px auto}.room-top h1{font-size:32px}.room-guide{font-size:12px}.room-dock-head{gap:3px 8px}.room-exit{font-size:13px!important}.room-inspector:has(~.room-dock .desk-rail:not([hidden])){bottom:222px}
+}
+@media(max-height:520px){.room-caption,.room-guide{display:none}.room-top{top:10px}.room-dock,.room-camera{bottom:6px}.room-top h1{font-size:25px}.room-inspector{top:62px;bottom:auto;max-height:49%}.room-dock{padding:6px}}
+@media(max-width:480px){.room-top{gap:8px}.room-top h1{font-size:clamp(23px,7.2vw,31px);white-space:nowrap}.room-top .room-overline{font-size:10px;letter-spacing:.09em}.room-top .room-exit{padding:8px 10px!important}.room-top .help-anchor{gap:4px}}

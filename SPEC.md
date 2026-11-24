@@ -77,7 +77,10 @@ under the intake grant. Provider failure is visible and must not switch provider
 The sign-in, library, run observer, firm workspaces, reference, and fictional website
 offer plain-language section help usable by pointer, keyboard, or touch.
 
-Each attempt includes a read-only illustrated firm desk. The CRM, callback pad,
+Each attempt has a dedicated full-viewport 3D law office. Perspective orbit,
+bounded zoom, reset, physical object selection, station buttons, and a non-WebGL
+fallback work without changing simulation state. Camera framing survives live
+polls. The CRM, callback pad,
 attorney handoff tray, conversation and case folder project the attempt's own
 records. Replay reverses recorded changes up to a selected event; it neither
 re-executes actions nor changes the score. Workspace links show latest/frozen

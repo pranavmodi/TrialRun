@@ -195,14 +195,20 @@ install the executable certificate reload hook in
 `/etc/letsencrypt/renewal-hooks/deploy/`. Never run two processes against the
 same data directory or interrupt an active evaluation for deployment.
 
-### Choose local inference or OpenClaw
+### Enter the 3D law office
 
-Open any attempt to visit the fictional Harbor & Stone intake desk. Select the
+Click **Enter office** on an attempt to open a full-window, three-dimensional
+cutaway of Harbor & Stone. Drag to orbit, wheel or pinch to zoom, or use the
+zoom and reset buttons. With the canvas focused, use the arrow keys, +/− and Home.
+Select a desk object directly or use its station button to move closer. Select the
 monitor for its CRM, the in-tray for attorney handoffs, the phone for conversation
-turns, the pad for callbacks, or the folder for case details. Previous/Next
+turns, the pad for callbacks, or the folder for case details. Open **Replay**; Previous/Next
 replays recorded events; Back to live (or Final state) returns to the latest
-records. The desk never modifies the attempt. On small screens its object
-controls are listed below the scene.
+records. The desk never modifies the attempt. Escape closes a station; **Back to attempt**
+returns to the evaluator. A photo and the same station controls remain available
+if WebGL is unavailable. To rebuild the self-hosted renderer: `npm ci && npm run build:office`.
+
+### Choose local inference or OpenClaw
 
 In **Evaluation Lab → Model-backed agent**, choose **Intake Clerk · Local model**
 or **Gateway Clerk · OpenClaw gateway**. Click **Run with AI**, then **Submit

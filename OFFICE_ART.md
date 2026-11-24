@@ -1,6 +1,10 @@
 # Harbor & Stone intake desk
 
-Original scene generated with the built-in image generator. The shipped WebP is
+The interactive cutaway is original procedural geometry, materials and canvas
+textures in `office/scene.js`. Three.js and OrbitControls are bundled locally;
+see `firm_lab/static/three-LICENSE.txt`. No external models or runtime CDN requests.
+
+The WebGL fallback is an original scene generated with the built-in image generator. The shipped WebP is
 `firm_lab/static/office-dusk.webp`. Screen text, interactive labels, records and
 replay controls are HTML, not generated artwork.
 
